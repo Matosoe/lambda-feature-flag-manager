@@ -1,0 +1,9 @@
+{
+  "httpMethod": "POST",
+  "path": "/parameters",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "body": "{\"name\": \"maintenance-date\", \"value\": \"2025-12-31\", \"description\": \"Data da próxima manutenção programada\", \"domain\": \"operations\", \"enabled\": true, \"value_type\": \"date\", \"modified_by\": \"ops@exemplo.com\", \"type\": \"String\"}",
+  "isBase64Encoded": false
+}

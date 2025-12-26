@@ -31,18 +31,26 @@ class ParameterService:
     def create_parameter(
         self,
         name: str,
-        value: str,
+        value: Any,
         description: str = '',
+        domain: str = '',
+        enabled: bool = True,
+        value_type: str = 'string',
+        modified_by: str = '',
         parameter_type: str = 'String'
     ) -> None:
         """
-        Create a new feature flag parameter
+        Create a new feature flag parameter with complete metadata
         
         Args:
             name: Parameter name (will be prefixed with /feature-flags/)
-            value: Parameter value
+            value: Parameter value (any type based on value_type)
             description: Parameter description
-            parameter_type: Parameter type (String, StringList, SecureString)
+            domain: Parameter domain
+            enabled: Whether the flag is enabled
+            value_type: Type of the value (boolean, string, integer, double, date, time, datetime, json)
+            modified_by: User who created the parameter
+            parameter_type: AWS Parameter type (String, StringList, SecureString)
         """
         full_name = f'/feature-flags/{name}'
         logger.info(f"Creating parameter: {full_name}")
@@ -51,14 +59,22 @@ class ParameterService:
             name=full_name,
             value=value,
             description=description,
+            domain=domain,
+            enabled=enabled,
+            value_type=value_type,
+            modified_by=modified_by,
             parameter_type=parameter_type
         )
     
     def update_parameter(
         self,
         name: str,
-        value: Optional[str] = None,
-        description: Optional[str] = None
+        value: Optional[Any] = None,
+        description: Optional[str] = None,
+        domain: Optional[str] = None,
+        enabled: Optional[bool] = None,
+        value_type: Optional[str] = None,
+        modified_by: Optional[str] = None
     ) -> None:
         """
         Update an existing feature flag parameter
@@ -67,16 +83,24 @@ class ParameterService:
             name: Parameter name (without /feature-flags/ prefix)
             value: New parameter value (optional)
             description: New parameter description (optional)
+            domain: New parameter domain (optional)
+            enabled: New enabled status (optional)
+            value_type: New value type (optional)
+            modified_by: User who modified the parameter
         """
         full_name = f'/feature-flags/{name}'
         logger.info(f"Updating parameter: {full_name}")
         
-        if value is None and description is None:
+        if all(v is None for v in [value, description, domain, enabled, value_type, modified_by]):
             logger.warning("No updates provided")
             return
         
         self.repository.update_parameter(
             name=full_name,
             value=value,
-            description=description
+            description=description,
+            domain=domain,
+            enabled=enabled,
+            value_type=value_type,
+            modified_by=modified_by
         )

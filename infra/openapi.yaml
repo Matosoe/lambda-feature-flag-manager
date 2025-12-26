@@ -1,8 +1,17 @@
 openapi: 3.0.0
 info:
   title: Feature Flag Manager API
-  description: API for managing feature flags in AWS Parameter Store
-  version: 1.0.0
+  description: |
+    API for managing feature flags in AWS Parameter Store with comprehensive metadata structure.
+    
+    Each feature flag includes:
+    - Description and domain classification
+    - Timestamp and user tracking for auditing
+    - Enabled/disabled status
+    - Type-safe values (boolean, string, integer, double, date, time, datetime, json)
+    
+    See full documentation at: https://github.com/your-org/lambda-feature-flag-manager
+  version: 2.0.0
   contact:
     name: API Support
 
@@ -138,23 +147,42 @@ components:
           type: string
           description: Complete parameter name with prefix
           example: /feature-flags/my-feature
-        type:
-          type: string
-          enum: [String, StringList, SecureString]
-          description: Parameter type
-          example: String
-        value:
-          type: string
-          description: Parameter value
-          example: enabled
         description:
           type: string
           description: Parameter description
           example: Controls my feature flag
+        domain:
+          type: string
+          description: Domain or business area
+          example: user-interface
         last_modified:
           type: string
           format: date-time
-          description: Last modification timestamp
+          description: Last modification timestamp (ISO 8601 UTC)
+          example: "2025-12-25T10:30:00.000000"
+        modified_by:
+          type: string
+          description: User who last modified the parameter
+          example: admin@example.com
+        enabled:
+          type: boolean
+          description: Whether the feature flag is enabled
+          example: true
+        value_type:
+          type: string
+          enum: [boolean, string, integer, double, date, time, datetime, json]
+          description: Type of the value
+          example: boolean
+        value:
+          oneOf:
+            - type: boolean
+            - type: string
+            - type: integer
+            - type: number
+            - type: object
+            - type: array
+          description: Parameter value (type depends on value_type)
+          example: true
     
     CreateParameterRequest:
       type: object
@@ -167,17 +195,42 @@ components:
           description: Parameter name (without /feature-flags/ prefix, must not contain '/')
           example: my-feature
         value:
+          oneOf:
+            - type: boolean
+            - type: string
+            - type: integer
+            - type: number
+            - type: object
+            - type: array
+          description: Parameter value (type should match value_type)
+          example: true
+        value_type:
           type: string
-          description: Parameter value
-          example: enabled
+          enum: [boolean, string, integer, double, date, time, datetime, json]
+          description: Type of the value
+          default: string
+          example: boolean
         description:
           type: string
           description: Parameter description
           example: Controls my feature flag
+        domain:
+          type: string
+          description: Domain or business area
+          example: user-interface
+        enabled:
+          type: boolean
+          description: Whether the feature flag is enabled
+          default: true
+          example: true
+        modified_by:
+          type: string
+          description: User creating the parameter
+          example: admin@example.com
         type:
           type: string
           enum: [String, StringList, SecureString]
-          description: Parameter type (default is String)
+          description: AWS Parameter Store type (default is String)
           default: String
           example: String
     
@@ -185,13 +238,36 @@ components:
       type: object
       properties:
         value:
-          type: string
+          oneOf:
+            - type: boolean
+            - type: string
+            - type: integer
+            - type: number
+            - type: object
+            - type: array
           description: New parameter value
-          example: disabled
+          example: false
+        value_type:
+          type: string
+          enum: [boolean, string, integer, double, date, time, datetime, json]
+          description: New value type
+          example: boolean
         description:
           type: string
           description: New parameter description
           example: Updated description
+        domain:
+          type: string
+          description: New domain
+          example: backend-services
+        enabled:
+          type: boolean
+          description: New enabled status
+          example: false
+        modified_by:
+          type: string
+          description: User modifying the parameter
+          example: admin@example.com
       minProperties: 1
     
     Error:

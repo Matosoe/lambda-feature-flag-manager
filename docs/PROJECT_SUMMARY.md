@@ -37,20 +37,27 @@ lambda-feature-flag-manager/
 │
 ├── 📄 Documentation
 │   ├── README.md                  # Comprehensive project documentation
-│   ├── QUICKSTART.md              # Quick start guide with examples
-│   ├── IMPLEMENTATION_PLAN.md     # Architecture and design decisions
+│   └── pyproject.toml             # Python project configuration
+│
+├── 📚 Documentation (docs/)
+│   ├── PARAMETER_STRUCTURE.md     # Parameter structure specification
+│   ├── EXAMPLES.md                # Usage examples and code samples
+│   ├── ARCHITECTURE_DIAGRAM.md    # Architecture diagrams
+│   ├── QUICKSTART_v2.md           # Quick start guide
+│   └── PROJECT_SUMMARY.md         # This file
+│
+├── 🚀 Infrastructure (infra/)
+│   ├── deploy.sh                  # Linux/Mac deployment script
+│   ├── Makefile                   # Common tasks automation
 │   └── openapi.yaml               # OpenAPI 3.0 specification
 │
-├── 🚀 Deployment
-│   ├── deploy.sh                  # Linux/Mac deployment script
-│   ├── deploy.ps1                 # Windows deployment script
-│   └── Makefile                   # Common tasks automation
-│
-├── 🧪 Testing
-│   ├── test_event_list.json       # Test event for GET /parameters
-│   ├── test_event_create.json     # Test event for POST /parameters
-│   ├── test_event_update.json     # Test event for PUT /parameters
-│   └── pyproject.toml             # Pytest configuration
+├── 🧪 Testing (tests/)
+│   ├── events/
+│   │   ├── test_event_list.json       # Test event for GET /parameters
+│   │   ├── test_event_create.json     # Test event for POST /parameters
+│   │   ├── test_event_update.json     # Test event for PUT /parameters
+│   │   ├── test_event_create_*.json   # Additional test events
+│   └── test_*.py                      # Unit tests
 │
 └── 📋 Configuration
     └── .gitignore                 # Git ignore patterns
@@ -242,10 +249,10 @@ The implementation demonstrates:
 
 ## 📞 Support
 
-- **Documentation**: See README.md, QUICKSTART.md, IMPLEMENTATION_PLAN.md
-- **API Spec**: See openapi.yaml
-- **Examples**: See test_event_*.json files
-- **Tests**: See tests/ directory
+- **Documentation**: See [README.md](../README.md), [QUICKSTART_v2.md](QUICKSTART_v2.md), [EXAMPLES.md](EXAMPLES.md)
+- **API Spec**: See [infra/openapi.yaml](../infra/openapi.yaml)
+- **Examples**: See [tests/events/](../tests/events/) directory
+- **Tests**: See [tests/](../tests/) directory
 
 ---
 

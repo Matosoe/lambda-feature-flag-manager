@@ -59,16 +59,38 @@ class ParameterController:
             name = body['name']
             value = body['value']
             description = body.get('description', '')
+            domain = body.get('domain', '')
+            enabled = body.get('enabled', True)
+            value_type = body.get('value_type', 'string')
+            modified_by = body.get('modified_by', '')
             parameter_type = body.get('type', 'String')
             
-            self.service.create_parameter(name, value, description, parameter_type)
+            self.service.create_parameter(
+                name=name,
+                value=value,
+                description=description,
+                domain=domain,
+                enabled=enabled,
+                value_type=value_type,
+                modified_by=modified_by,
+                parameter_type=parameter_type
+            )
             
             return {
                 'statusCode': 201,
                 'headers': {'Content-Type': 'application/json'},
                 'body': json.dumps({
                     'message': 'Parameter created successfully',
-                    'name': f'/feature-flags/{name}'
+                    'name': f'/feature-flags/{name}',
+                    'parameter': {
+                        'name': name,
+                        'value': value,
+                        'description': description,
+                        'domain': domain,
+                        'enabled': enabled,
+                        'value_type': value_type,
+                        'modified_by': modified_by
+                    }
                 })
             }
         except ValidationError:
@@ -95,8 +117,20 @@ class ParameterController:
             
             value = body.get('value')
             description = body.get('description')
+            domain = body.get('domain')
+            enabled = body.get('enabled')
+            value_type = body.get('value_type')
+            modified_by = body.get('modified_by')
             
-            self.service.update_parameter(parameter_name, value, description)
+            self.service.update_parameter(
+                name=parameter_name,
+                value=value,
+                description=description,
+                domain=domain,
+                enabled=enabled,
+                value_type=value_type,
+                modified_by=modified_by
+            )
             
             return {
                 'statusCode': 200,

@@ -4,6 +4,6 @@
   "headers": {
     "Content-Type": "application/json"
   },
-  "body": "{\"value\": \"disabled\", \"description\": \"Updated test feature flag\"}",
+  "body": "{\"value\": false, \"description\": \"Updated test feature flag\", \"enabled\": false, \"modified_by\": \"admin@example.com\"}",
   "isBase64Encoded": false
 }

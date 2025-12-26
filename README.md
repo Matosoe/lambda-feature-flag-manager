@@ -2,6 +2,19 @@
 
 AWS Lambda-based REST API for managing feature flags stored in AWS Systems Manager Parameter Store.
 
+## ⚠️ Estrutura de Parâmetros Atualizada
+
+**IMPORTANTE**: Este projeto utiliza uma estrutura JSON padronizada para todos os parâmetros feature flags. Cada parâmetro armazena um objeto JSON com metadados completos incluindo descrição, domínio, timestamp, usuário, status enabled e tipo de valor.
+
+📖 **Leia a documentação completa**: [PARAMETER_STRUCTURE.md](docs/PARAMETER_STRUCTURE.md)
+
+### Principais Características:
+- ✅ **Metadados Completos**: Descrição, domínio, timestamp, usuário
+- ✅ **Tipos Suportados**: boolean, string, integer, double, date, time, datetime, json
+- ✅ **Flag Enabled**: Controle se a flag está ativa
+- ✅ **Auditoria**: Rastreamento de modificações por usuário e timestamp
+- ✅ **Retrocompatibilidade**: Suporta parâmetros antigos
+
 ## Architecture
 
 This project follows **SOLID principles** and clean architecture patterns:
@@ -11,6 +24,8 @@ This project follows **SOLID principles** and clean architecture patterns:
 - **Liskov Substitution Principle**: Repository interfaces can be substituted with implementations
 - **Interface Segregation Principle**: Small, focused interfaces
 - **Dependency Inversion Principle**: High-level modules depend on abstractions, not implementations
+
+📂 **Ver estrutura completa**: [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)
 
 ### Project Structure
 
@@ -28,8 +43,20 @@ This project follows **SOLID principles** and clean architecture patterns:
 │   │   └── parameter_repository.py  # AWS Parameter Store operations
 │   └── validators/
 │       └── parameter_validator.py   # Input validation
-├── openapi.yaml                # OpenAPI 3.0 specification
-└── requirements.txt            # Python dependencies
+├── tests/
+│   ├── events/                 # Test event files
+│   └── *.py                    # Unit tests
+├── docs/                       # Documentation files
+│   ├── PARAMETER_STRUCTURE.md  # Parameter structure specification
+│   ├── EXAMPLES.md             # Usage examples
+│   ├── ARCHITECTURE_DIAGRAM.md # Architecture diagrams
+│   └── QUICKSTART_v2.md        # Quick start guide
+├── infra/                      # Infrastructure and deployment
+│   ├── openapi.yaml            # OpenAPI 3.0 specification
+│   ├── deploy.sh               # Deployment script
+│   └── Makefile                # Build automation
+├── requirements.txt            # Python dependencies
+└── README.md                   # This file
 ```
 
 ## Features
@@ -46,10 +73,13 @@ Lists all feature flags with `/feature-flags` prefix from Parameter Store.
     {
       "name": "my-feature",
       "full_name": "/feature-flags/my-feature",
-      "type": "String",
-      "value": "enabled",
       "description": "Controls my feature",
-      "last_modified": "2025-12-25T20:00:00+00:00"
+      "domain": "user-interface",
+      "last_modified": "2025-12-25T20:00:00.000000",
+      "modified_by": "admin@example.com",
+      "enabled": true,
+      "value_type": "boolean",
+      "value": true
     }
   ]
 }
@@ -58,36 +88,53 @@ Lists all feature flags with `/feature-flags` prefix from Parameter Store.
 ### 2. Create Parameter
 **Endpoint**: `POST /parameters`
 
-Creates a new feature flag parameter.
+Creates a new feature flag parameter with complete metadata structure.
 
 **Request Body**:
 ```json
 {
   "name": "my-feature",
-  "value": "enabled",
+  "value": true,
+  "value_type": "boolean",
   "description": "Controls my feature",
+  "domain": "user-interface",
+  "enabled": true,
+  "modified_by": "admin@example.com",
   "type": "String"
 }
 ```
+
+**Supported value_types**: `boolean`, `string`, `integer`, `double`, `date`, `time`, `datetime`, `json`
 
 **Response** (201 Created):
 ```json
 {
   "message": "Parameter created successfully",
-  "name": "/feature-flags/my-feature"
+  "name": "/feature-flags/my-feature",
+  "parameter": {
+    "name": "my-feature",
+    "value": true,
+    "description": "Controls my feature",
+    "domain": "user-interface",
+    "enabled": true,
+    "value_type": "boolean",
+    "modified_by": "admin@example.com"
+  }
 }
 ```
 
 ### 3. Update Parameter
 **Endpoint**: `PUT /parameters/{parameterName}`
 
-Updates an existing feature flag parameter.
+Updates an existing feature flag parameter. All fields are optional.
 
 **Request Body**:
 ```json
 {
-  "value": "disabled",
-  "description": "Updated description"
+  "value": false,
+  "description": "Updated description",
+  "enabled": false,
+  "modified_by": "admin@example.com"
 }
 ```
 
@@ -203,11 +250,23 @@ All errors return JSON:
 
 ## OpenAPI Specification
 
-The API is fully documented using OpenAPI 3.0 standard. See `openapi.yaml` for the complete specification. This enables:
+The API is fully documented using OpenAPI 3.0 standard. See [infra/openapi.yaml](infra/openapi.yaml) for the complete specification. This enables:
 - Automatic API documentation generation
 - Client SDK generation
 - API testing tools integration
 - LLM agent integration
+
+## Documentation
+
+📚 **Complete Documentation**:
+- [Parameter Structure](docs/PARAMETER_STRUCTURE.md) - Detailed specification of the JSON structure
+- [Examples](docs/EXAMPLES.md) - Practical examples and code samples
+- [Architecture Diagrams](docs/ARCHITECTURE_DIAGRAM.md) - Visual architecture documentation
+- [Quick Start Guide](docs/QUICKSTART_v2.md) - Get started quickly
+
+## Test Events
+
+Sample test events are available in [`tests/events/`](tests/events/) directory for local testing.
 
 ## License
 
