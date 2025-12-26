@@ -1,0 +1,203 @@
+openapi: 3.0.0
+info:
+  title: Feature Flag Manager API
+  description: API for managing feature flags in AWS Parameter Store
+  version: 1.0.0
+  contact:
+    name: API Support
+
+servers:
+  - url: https://api.example.com/prod
+    description: Production server
+  - url: https://api.example.com/dev
+    description: Development server
+
+paths:
+  /parameters:
+    get:
+      summary: List all feature flags
+      description: Retrieves all feature flag parameters from AWS Parameter Store with /feature-flags prefix
+      operationId: listParameters
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  parameters:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Parameter'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    post:
+      summary: Create a new feature flag
+      description: Creates a new feature flag parameter in AWS Parameter Store
+      operationId: createParameter
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateParameterRequest'
+      responses:
+        '201':
+          description: Parameter created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Parameter created successfully
+                  name:
+                    type: string
+                    example: /feature-flags/my-feature
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /parameters/{parameterName}:
+    put:
+      summary: Update an existing feature flag
+      description: Updates value and/or description of an existing feature flag parameter
+      operationId: updateParameter
+      parameters:
+        - name: parameterName
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Name of the parameter (without /feature-flags/ prefix)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateParameterRequest'
+      responses:
+        '200':
+          description: Parameter updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Parameter updated successfully
+                  name:
+                    type: string
+                    example: /feature-flags/my-feature
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Parameter not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    Parameter:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Parameter name without prefix
+          example: my-feature
+        full_name:
+          type: string
+          description: Complete parameter name with prefix
+          example: /feature-flags/my-feature
+        type:
+          type: string
+          enum: [String, StringList, SecureString]
+          description: Parameter type
+          example: String
+        value:
+          type: string
+          description: Parameter value
+          example: enabled
+        description:
+          type: string
+          description: Parameter description
+          example: Controls my feature flag
+        last_modified:
+          type: string
+          format: date-time
+          description: Last modification timestamp
+    
+    CreateParameterRequest:
+      type: object
+      required:
+        - name
+        - value
+      properties:
+        name:
+          type: string
+          description: Parameter name (without /feature-flags/ prefix, must not contain '/')
+          example: my-feature
+        value:
+          type: string
+          description: Parameter value
+          example: enabled
+        description:
+          type: string
+          description: Parameter description
+          example: Controls my feature flag
+        type:
+          type: string
+          enum: [String, StringList, SecureString]
+          description: Parameter type (default is String)
+          default: String
+          example: String
+    
+    UpdateParameterRequest:
+      type: object
+      properties:
+        value:
+          type: string
+          description: New parameter value
+          example: disabled
+        description:
+          type: string
+          description: New parameter description
+          example: Updated description
+      minProperties: 1
+    
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: Validation error
