@@ -83,6 +83,19 @@ class Router:
                     self.auth_middleware.validate_permission(user_id, 'escrita')
                     return self.parameter_controller.create_parameter(event)
             
+            # Route for listing all prefixes
+            if path == '/parameters/prefixes' or path == '/parameters/prefixes/':
+                if method == 'GET':
+                    self.auth_middleware.validate_permission(user_id, 'leitura')
+                    return self.parameter_controller.list_prefixes(event)
+            
+            # Route for listing parameters by prefix
+            if path.startswith('/parameters/prefix/'):
+                prefix = path.replace('/parameters/prefix/', '')
+                if prefix and method == 'GET':
+                    self.auth_middleware.validate_permission(user_id, 'leitura')
+                    return self.parameter_controller.list_parameters_by_prefix(event, prefix)
+            
             if path.startswith('/parameters/'):
                 parameter_id = path.replace('/parameters/', '')
                 if parameter_id and method == 'PUT':

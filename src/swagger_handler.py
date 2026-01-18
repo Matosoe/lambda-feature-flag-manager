@@ -67,11 +67,26 @@ def get_openapi_spec() -> dict:
                 "get": {
                     "tags": ["Parameters"],
                     "summary": "Listar feature flags",
-                    "description": "Lista todos os feature flags do Parameter Store",
+                    "description": "Lista todos os feature flags do Parameter Store com hierarquia de prefixos. Cada parâmetro inclui o caminho completo e ARN.",
                     "security": [{"UserAuth": []}],
                     "parameters": [{"$ref": "#/components/parameters/UserIdHeader"}],
                     "responses": {
-                        "200": {"description": "Lista de parâmetros"},
+                        "200": {
+                            "description": "Lista de parâmetros com path e ARN",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "parameters": {
+                                                "type": "array",
+                                                "items": {"$ref": "#/components/schemas/ParameterDetail"}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
                         "403": {"$ref": "#/components/responses/Forbidden"}
                     }
                 },
@@ -105,6 +120,76 @@ def get_openapi_spec() -> dict:
                     "responses": {
                         "201": {"description": "Parâmetro criado"},
                         "400": {"$ref": "#/components/responses/BadRequest"},
+                        "403": {"$ref": "#/components/responses/Forbidden"}
+                    }
+                }
+            },
+            "/parameters/prefix/{prefix}": {
+                "get": {
+                    "tags": ["Parameters"],
+                    "summary": "Listar feature flags por prefixo",
+                    "description": "Lista feature flags filtrados por um prefixo específico (ex: 'ui', 'api', 'config')",
+                    "security": [{"UserAuth": []}],
+                    "parameters": [
+                        {"$ref": "#/components/parameters/UserIdHeader"},
+                        {
+                            "name": "prefix",
+                            "in": "path",
+                            "required": True,
+                            "schema": {"type": "string"},
+                            "example": "ui",
+                            "description": "Prefixo customizado dentro de /feature-flags/flags"
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Lista de parâmetros do prefixo",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "prefix": {"type": "string"},
+                                            "parameters": {
+                                                "type": "array",
+                                                "items": {"$ref": "#/components/schemas/ParameterDetail"}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "403": {"$ref": "#/components/responses/Forbidden"}
+                    }
+                }
+            },
+            "/parameters/prefixes": {
+                "get": {
+                    "tags": ["Parameters"],
+                    "summary": "Listar todos os prefixos disponíveis",
+                    "description": "Retorna uma lista de todos os prefixos únicos sob /feature-flags/flags (ex: api, config, ui)",
+                    "security": [{"UserAuth": []}],
+                    "parameters": [
+                        {"$ref": "#/components/parameters/UserIdHeader"}
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Lista de prefixos disponíveis",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "prefixes": {
+                                                "type": "array",
+                                                "items": {"type": "string"},
+                                                "example": ["api", "config", "ui"]
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
                         "403": {"$ref": "#/components/responses/Forbidden"}
                     }
                 }
@@ -211,6 +296,27 @@ def get_openapi_spec() -> dict:
                 }
             },
             "schemas": {
+                "ParameterDetail": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "string", "example": "DARK_MODE"},
+                        "value": {"type": "string", "example": "true"},
+                        "type": {"type": "string", "enum": ["BOOLEAN", "STRING", "INTEGER", "DOUBLE", "DATE", "TIME", "DATETIME", "JSON"]},
+                        "description": {"type": "string", "example": "Habilita modo escuro"},
+                        "lastModifiedAt": {"type": "string", "format": "date-time"},
+                        "lastModifiedBy": {"type": "string", "format": "email"},
+                        "path": {"type": "string", "example": "/feature-flags/flags/ui/DARK_MODE", "description": "Caminho completo no Parameter Store"},
+                        "arn": {"type": "string", "example": "arn:aws:ssm:us-east-1:000000000000:parameter/feature-flags/flags/ui/DARK_MODE", "description": "ARN do parâmetro"},
+                        "previousVersion": {
+                            "type": "object",
+                            "properties": {
+                                "value": {"type": "string"},
+                                "modifiedAt": {"type": "string", "format": "date-time"},
+                                "modifiedBy": {"type": "string", "format": "email"}
+                            }
+                        }
+                    }
+                },
                 "CreateParameterRequest": {
                     "type": "object",
                     "required": ["id", "value", "type", "lastModifiedBy"],
@@ -220,7 +326,7 @@ def get_openapi_spec() -> dict:
                         "type": {"type": "string", "enum": ["BOOLEAN", "STRING", "INTEGER", "DOUBLE", "DATE", "TIME", "DATETIME", "JSON"]},
                         "description": {"type": "string"},
                         "lastModifiedBy": {"type": "string", "format": "email"},
-                        "prefix": {"type": "string"}
+                        "prefix": {"type": "string", "example": "ui", "description": "Prefixo customizado (opcional)"}
                     }
                 }
             },

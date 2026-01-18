@@ -20,13 +20,45 @@ class ParameterService:
     
     def list_parameters(self) -> List[Dict[str, Any]]:
         """
-        List all feature flag parameters
+        List all feature flag parameters organized by prefix hierarchy
         
         Returns:
-            List of parameters with their details
+            List of parameters with their details including path and ARN
         """
         logger.info("Listing feature flag parameters")
-        return self.repository.get_all_parameters()
+        parameters = self.repository.get_all_parameters()
+        
+        # Sort by path to maintain hierarchical order
+        parameters.sort(key=lambda x: x.get('path', ''))
+        
+        return parameters
+    
+    def list_parameters_by_prefix(self, prefix: str) -> List[Dict[str, Any]]:
+        """
+        List feature flag parameters filtered by custom prefix
+        
+        Args:
+            prefix: Custom prefix within /feature-flags/flags (e.g., 'ui', 'api', 'config')
+            
+        Returns:
+            List of parameters matching the prefix
+        """
+        logger.info(f"Listing feature flag parameters with prefix: {prefix}")
+        parameters = self.repository.get_parameters_by_prefix(prefix)
+        
+        # Sort by path to maintain hierarchical order
+        parameters.sort(key=lambda x: x.get('path', ''))
+        
+        return parameters
+    
+    def list_prefixes(self) -> List[str]:
+        """
+        List all available prefixes under /feature-flags/flags/
+        
+        Returns:
+            List of unique prefix strings sorted alphabetically
+        """
+        return self.repository.get_all_prefixes()
     
     def create_parameter(
         self,

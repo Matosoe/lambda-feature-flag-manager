@@ -63,7 +63,9 @@ class ParameterRepository:
                                 'type': param_data.get('type', 'STRING'),
                                 'description': param_data.get('description', ''),
                                 'lastModifiedAt': param_data.get('lastModifiedAt', param['LastModifiedDate'].isoformat()),
-                                'lastModifiedBy': param_data.get('lastModifiedBy', '')
+                                'lastModifiedBy': param_data.get('lastModifiedBy', ''),
+                                'path': param['Name'],
+                                'arn': param.get('ARN', f"arn:aws:ssm:us-east-1:000000000000:parameter{param['Name']}")
                             }
                             # Include previousVersion if present
                             if 'previousVersion' in param_data:
@@ -76,7 +78,9 @@ class ParameterRepository:
                                 'type': 'STRING',
                                 'description': param.get('Description', ''),
                                 'lastModifiedAt': param['LastModifiedDate'].isoformat(),
-                                'lastModifiedBy': ''
+                                'lastModifiedBy': '',
+                                'path': param['Name'],
+                                'arn': param.get('ARN', f"arn:aws:ssm:us-east-1:000000000000:parameter{param['Name']}")
                             }
                     except ClientError as e:
                         logger.warning(f"Could not retrieve value for {param['Name']}: {str(e)}")
@@ -86,7 +90,9 @@ class ParameterRepository:
                             'type': 'STRING',
                             'description': param.get('Description', ''),
                             'lastModifiedAt': param['LastModifiedDate'].isoformat(),
-                            'lastModifiedBy': ''
+                            'lastModifiedBy': '',
+                            'path': param['Name'],
+                            'arn': param.get('ARN', f"arn:aws:ssm:us-east-1:000000000000:parameter{param['Name']}")
                         }
                     
                     parameters.append(param_detail)
@@ -96,6 +102,119 @@ class ParameterRepository:
         except ClientError as e:
             logger.error(f"Error retrieving parameters: {str(e)}")
             raise ParameterStoreError(f"Failed to list parameters: {str(e)}")
+    
+    def get_parameters_by_prefix(self, custom_prefix: str) -> List[Dict[str, Any]]:
+        """
+        Retrieve parameters filtered by custom prefix
+        Uses get_parameters_by_path which is more reliable than describe_parameters with LocalStack
+        
+        Args:
+            custom_prefix: Custom prefix within /feature-flags/flags (e.g., 'ui', 'api', 'config')
+            
+        Returns:
+            List of parameter dictionaries matching the prefix
+        """
+        try:
+            parameters = []
+            search_path = f'{self.prefix}/{custom_prefix}'
+            
+            # Use get_parameters_by_path instead of describe_parameters to avoid LocalStack bugs
+            paginator = self.ssm_client.get_paginator('get_parameters_by_path')
+            page_iterator = paginator.paginate(
+                Path=search_path,
+                Recursive=True,
+                WithDecryption=True
+            )
+            
+            for page in page_iterator:
+                for param in page.get('Parameters', []):
+                    try:
+                        param_value = param['Value']
+                        
+                        # Parse the JSON structure
+                        try:
+                            param_data = json.loads(param_value)
+                            param_detail = {
+                                'id': param_data.get('id', param['Name'].replace(f'{search_path}/', '')),
+                                'value': param_data.get('value', ''),
+                                'type': param_data.get('type', 'STRING'),
+                                'description': param_data.get('description', ''),
+                                'lastModifiedAt': param_data.get('lastModifiedAt', param['LastModifiedDate'].isoformat()),
+                                'lastModifiedBy': param_data.get('lastModifiedBy', ''),
+                                'path': param['Name'],
+                                'arn': param.get('ARN', f"arn:aws:ssm:us-east-1:000000000000:parameter{param['Name']}"),
+                                'prefix': custom_prefix
+                            }
+                            # Include previousVersion if present
+                            if 'previousVersion' in param_data:
+                                param_detail['previousVersion'] = param_data['previousVersion']
+                        except (json.JSONDecodeError, TypeError):
+                            # Fallback for old format parameters
+                            param_detail = {
+                                'id': param['Name'].replace(f'{search_path}/', ''),
+                                'value': param_value,
+                                'type': 'STRING',
+                                'description': param.get('Description', ''),
+                                'lastModifiedAt': param['LastModifiedDate'].isoformat(),
+                                'lastModifiedBy': '',
+                                'path': param['Name'],
+                                'arn': param.get('ARN', f"arn:aws:ssm:us-east-1:000000000000:parameter{param['Name']}"),
+                                'prefix': custom_prefix
+                            }
+                    except ClientError as e:
+                        logger.warning(f"Could not retrieve value for {param['Name']}: {str(e)}")
+                        param_detail = {
+                            'id': param['Name'].replace(f'{search_path}/', ''),
+                            'value': '',
+                            'type': 'STRING',
+                            'description': param.get('Description', ''),
+                            'lastModifiedAt': param['LastModifiedDate'].isoformat(),
+                            'lastModifiedBy': '',
+                            'path': param['Name'],
+                            'arn': param.get('ARN', f"arn:aws:ssm:us-east-1:000000000000:parameter{param['Name']}"),
+                            'prefix': custom_prefix
+                        }
+                    
+                    parameters.append(param_detail)
+            
+            return parameters
+            
+        except ClientError as e:
+            logger.error(f"Error retrieving parameters by prefix '{custom_prefix}': {str(e)}")
+            raise ParameterStoreError(f"Failed to list parameters by prefix: {str(e)}")
+    
+    def get_all_prefixes(self) -> List[str]:
+        """
+        Retrieve all unique prefixes from parameters under /feature-flags/flags/
+        
+        Returns:
+            List of unique prefix strings (e.g., ['api', 'config', 'ui'])
+        """
+        try:
+            prefixes = set()
+            
+            # Use get_parameters_by_path to list all parameters
+            paginator = self.ssm_client.get_paginator('get_parameters_by_path')
+            page_iterator = paginator.paginate(
+                Path=self.prefix,
+                Recursive=True
+            )
+            
+            for page in page_iterator:
+                for param in page.get('Parameters', []):
+                    param_name = param['Name']
+                    # Extract prefix from path: /feature-flags/flags/{prefix}/{id}
+                    # Remove the base prefix and split
+                    relative_path = param_name.replace(f'{self.prefix}/', '')
+                    if '/' in relative_path:
+                        prefix = relative_path.split('/')[0]
+                        prefixes.add(prefix)
+            
+            return sorted(list(prefixes))
+            
+        except ClientError as e:
+            logger.error(f"Error retrieving prefixes: {str(e)}")
+            raise ParameterStoreError(f"Failed to list prefixes: {str(e)}")
     
     def create_parameter(
         self,

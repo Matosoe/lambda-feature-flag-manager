@@ -174,7 +174,7 @@ Todas as requisições devem incluir o header `X-User-Id` para autenticação.
 **Endpoint**: `GET /parameters`
 **Permissão**: `leitura`
 
-Lista todos os feature flags com o prefixo `/feature-flags/flags`.
+Lista todos os feature flags com o prefixo `/feature-flags/flags`, ordenados hierarquicamente por caminho.
 
 **Exemplo**:
 ```bash
@@ -187,14 +187,77 @@ curl -X GET "http://localhost:4566/2021-10-31/functions/feature-flag-manager/inv
 {
   "parameters": [
     {
-      "id": "DARK_MODE",
-      "value": "true",
-      "type": "BOOLEAN",
-      "description": "Habilita modo escuro",
-      "lastModifiedAt": "2026-01-14T10:00:00Z",
-      "lastModifiedBy": "admin@local.dev"
+      "id": "API_RETRIES",
+      "value": "3",
+      "type": "INTEGER",
+      "description": "Número de tentativas da API",
+      "lastModifiedAt": "2026-01-18T02:40:07Z",
+      "lastModifiedBy": "",
+      "path": "/feature-flags/flags/api/API_RETRIES",
+      "arn": "arn:aws:ssm:us-east-1:000000000000:parameter/feature-flags/flags/api/API_RETRIES"
+    },
+    {
+      "id": "API_TIMEOUT",
+      "value": "5000",
+      "type": "INTEGER",
+      "description": "Timeout da API em ms",
+      "lastModifiedAt": "2026-01-18T02:39:59Z",
+      "lastModifiedBy": "",
+      "path": "/feature-flags/flags/api/API_TIMEOUT",
+      "arn": "arn:aws:ssm:us-east-1:000000000000:parameter/feature-flags/flags/api/API_TIMEOUT"
     }
   ]
+}
+```
+
+### 1.1 Listar Parâmetros por Prefixo
+**Endpoint**: `GET /parameters/prefix/{prefix}`
+**Permissão**: `leitura`
+
+Lista apenas os feature flags que estão sob um prefixo específico (ex: `ui`, `api`, `config`).
+
+**Exemplo**:
+```bash
+curl -X GET "http://localhost:4566/2021-10-31/functions/feature-flag-manager/invocations/parameters/prefix/api" \
+  -H "X-User-Id: dev@local.dev"
+```
+
+**Response**:
+```json
+{
+  "prefix": "api",
+  "parameters": [
+    {
+      "id": "API_RETRIES",
+      "value": "3",
+      "type": "INTEGER",
+      "description": "Número de tentativas da API",
+      "lastModifiedAt": "2026-01-18T02:40:07Z",
+      "lastModifiedBy": "",
+      "path": "/feature-flags/flags/api/API_RETRIES",
+      "arn": "arn:aws:ssm:us-east-1:000000000000:parameter/feature-flags/flags/api/API_RETRIES",
+      "prefix": "api"
+    }
+  ]
+}
+```
+
+### 1.2 Listar Prefixos Disponíveis
+**Endpoint**: `GET /parameters/prefixes`
+**Permissão**: `leitura`
+
+Retorna todos os prefixos únicos disponíveis sob `/feature-flags/flags/` (ex: `api`, `config`, `ui`).
+
+**Exemplo**:
+```bash
+curl -X GET "http://localhost:4566/2021-10-31/functions/feature-flag-manager/invocations/parameters/prefixes" \
+  -H "X-User-Id: dev@local.dev"
+```
+
+**Response**:
+```json
+{
+  "prefixes": ["api", "config"]
 }
 ```
 

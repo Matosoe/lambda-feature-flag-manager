@@ -22,13 +22,13 @@ class ParameterController:
     
     def list_parameters(self, event: Dict[str, Any]) -> Dict[str, Any]:
         """
-        List all feature flag parameters
+        List all feature flag parameters with hierarchical organization
         
         Args:
             event: API Gateway event
             
         Returns:
-            API Gateway response with parameter list
+            API Gateway response with parameter list including path and ARN
         """
         try:
             parameters = self.service.list_parameters()
@@ -39,6 +39,56 @@ class ParameterController:
             }
         except Exception as e:
             logger.error(f"Error listing parameters: {str(e)}")
+            raise
+    
+    def list_parameters_by_prefix(self, event: Dict[str, Any], prefix: str) -> Dict[str, Any]:
+        """
+        List feature flag parameters filtered by prefix
+        
+        Args:
+            event: API Gateway event
+            prefix: Custom prefix to filter by
+            
+        Returns:
+            API Gateway response with filtered parameter list
+        """
+        try:
+            parameters = self.service.list_parameters_by_prefix(prefix)
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json'},
+                'body': json.dumps({
+                    'prefix': prefix,
+                    'parameters': parameters
+                })
+            }
+        except Exception as e:
+            logger.error(f"Error listing parameters by prefix: {str(e)}")
+            raise
+    
+    def list_prefixes(self, event: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        List all available prefixes
+        
+        Args:
+            event: API Gateway event
+            
+        Returns:
+            API Gateway response with list of prefixes
+        """
+        try:
+            logger.info("Listing all available prefixes")
+            prefixes = self.service.list_prefixes()
+            
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json'},
+                'body': json.dumps({
+                    'prefixes': prefixes
+                })
+            }
+        except Exception as e:
+            logger.error(f"Error listing prefixes: {str(e)}")
             raise
     
     def create_parameter(self, event: Dict[str, Any]) -> Dict[str, Any]:
