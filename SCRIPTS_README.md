@@ -29,6 +29,7 @@ Todos os scripts são executáveis no Git Bash (Windows), Bash (Linux) ou Termin
 
 - **`./test-api.sh`** - Testa a API com curl (rápido)
 - **`./test-python.sh`** - Executa suite completa de testes Python
+- **`./test-complete.sh`** - Testa parameters e users (OK + erro)
 - **`./validate.sh`** - Valida se o ambiente está configurado corretamente
 
 ### Utilitários

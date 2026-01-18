@@ -176,6 +176,68 @@ class ParameterRepository:
         except ClientError as e:
             logger.error(f"Error retrieving parameters by prefix '{custom_prefix}': {str(e)}")
             raise ParameterStoreError(f"Failed to list parameters by prefix: {str(e)}")
+
+    def get_parameter(self, param_id: str, custom_prefix: str = '') -> Dict[str, Any]:
+        """
+        Retrieve a single parameter by id and optional prefix.
+
+        Args:
+            param_id: Parameter identifier
+            custom_prefix: Optional prefix within flags
+
+        Returns:
+            Parameter detail dictionary
+        """
+        try:
+            if custom_prefix:
+                full_name = f'{self.prefix}/{custom_prefix}/{param_id}'
+            else:
+                full_name = f'{self.prefix}/{param_id}'
+
+            try:
+                response = self.ssm_client.get_parameter(Name=full_name, WithDecryption=True)
+            except ClientError as e:
+                error_code = e.response.get('Error', {}).get('Code', '')
+                if error_code == 'ParameterNotFound' and not custom_prefix:
+                    full_name = self._resolve_parameter_path_by_id(param_id)
+                    response = self.ssm_client.get_parameter(Name=full_name, WithDecryption=True)
+                else:
+                    raise
+
+            param = response['Parameter']
+            param_value = param.get('Value', '')
+
+            try:
+                param_data = json.loads(param_value)
+                param_detail = {
+                    'id': param_data.get('id', param_id),
+                    'value': param_data.get('value', ''),
+                    'type': param_data.get('type', 'STRING'),
+                    'description': param_data.get('description', ''),
+                    'lastModifiedAt': param_data.get('lastModifiedAt', ''),
+                    'lastModifiedBy': param_data.get('lastModifiedBy', ''),
+                    'arn': param.get('ARN', f"arn:aws:ssm:us-east-1:000000000000:parameter{full_name}")
+                }
+                if 'previousVersion' in param_data:
+                    param_detail['previousVersion'] = param_data['previousVersion']
+            except (json.JSONDecodeError, TypeError):
+                param_detail = {
+                    'id': param_id,
+                    'value': param_value,
+                    'type': 'STRING',
+                    'description': param.get('Description', ''),
+                    'lastModifiedAt': param.get('LastModifiedDate', '').isoformat() if param.get('LastModifiedDate') else '',
+                    'lastModifiedBy': '',
+                    'arn': param.get('ARN', f"arn:aws:ssm:us-east-1:000000000000:parameter{full_name}")
+                }
+
+            return param_detail
+        except ClientError as e:
+            error_code = e.response.get('Error', {}).get('Code', '')
+            if error_code == 'ParameterNotFound':
+                raise ParameterNotFoundError(f"Parameter {param_id} not found")
+            logger.error(f"Error retrieving parameter: {str(e)}")
+            raise ParameterStoreError(f"Failed to retrieve parameter: {str(e)}")
     
     def get_all_prefixes(self) -> List[str]:
         """

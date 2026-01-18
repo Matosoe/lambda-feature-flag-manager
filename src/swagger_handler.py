@@ -257,6 +257,14 @@ def get_openapi_spec() -> dict:
                     "description": "Requer permissão admin",
                     "security": [{"UserAuth": []}],
                     "parameters": [{"$ref": "#/components/parameters/UserIdHeader"}],
+                    "requestBody": {
+                        "required": True,
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/CreateUserRequest"}
+                            }
+                        }
+                    },
                     "responses": {"201": {"description": "Usuário criado"}}
                 }
             },
@@ -363,6 +371,23 @@ def get_openapi_spec() -> dict:
                 "UpdateUserRequest": {
                     "type": "object",
                     "properties": {
+                        "nome": {"type": "string", "example": "Nome do Usuário"},
+                        "permissoes": {
+                            "type": "object",
+                            "properties": {
+                                "leitura": {"type": "boolean"},
+                                "escrita": {"type": "boolean"},
+                                "admin": {"type": "boolean"}
+                            }
+                        },
+                        "ativo": {"type": "boolean", "example": True}
+                    }
+                },
+                "CreateUserRequest": {
+                    "type": "object",
+                    "required": ["id", "nome", "permissoes"],
+                    "properties": {
+                        "id": {"type": "string", "format": "email", "example": "usuario@local.dev"},
                         "nome": {"type": "string", "example": "Nome do Usuário"},
                         "permissoes": {
                             "type": "object",

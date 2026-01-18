@@ -107,13 +107,20 @@ class Router:
 
             if path.startswith('/parameters/'):
                 parameter_id = path.replace('/parameters/', '')
-                if parameter_id and method == 'PUT':
-                    self.auth_middleware.validate_permission(user_id, 'escrita')
+                if parameter_id and method in ['GET', 'PUT']:
                     decoded_id = unquote(parameter_id)
                     if '/' in decoded_id:
                         custom_prefix, param_id = decoded_id.split('/', 1)
+                    else:
+                        custom_prefix, param_id = '', decoded_id
+
+                    if method == 'GET':
+                        self.auth_middleware.validate_permission(user_id, 'leitura')
+                        return self.parameter_controller.get_parameter(event, param_id, custom_prefix)
+
+                    if method == 'PUT':
+                        self.auth_middleware.validate_permission(user_id, 'escrita')
                         return self.parameter_controller.update_parameter(event, param_id, custom_prefix)
-                    return self.parameter_controller.update_parameter(event, decoded_id)
             
             return {
                 'statusCode': 404,

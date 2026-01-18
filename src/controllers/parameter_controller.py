@@ -65,6 +65,35 @@ class ParameterController:
         except Exception as e:
             logger.error(f"Error listing parameters by prefix: {str(e)}")
             raise
+
+    def get_parameter(self, event: Dict[str, Any], parameter_id: str, custom_prefix: str = '') -> Dict[str, Any]:
+        """
+        Get a specific feature flag parameter
+
+        Args:
+            event: API Gateway event
+            parameter_id: ID of parameter
+            custom_prefix: Optional custom prefix
+
+        Returns:
+            API Gateway response
+        """
+        try:
+            parameter = self.service.get_parameter(param_id=parameter_id, custom_prefix=custom_prefix)
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json'},
+                'body': json.dumps(parameter)
+            }
+        except ParameterNotFoundError as e:
+            return {
+                'statusCode': 404,
+                'headers': {'Content-Type': 'application/json'},
+                'body': json.dumps({'error': str(e)})
+            }
+        except Exception as e:
+            logger.error(f"Error getting parameter: {str(e)}")
+            raise
     
     def list_prefixes(self, event: Dict[str, Any]) -> Dict[str, Any]:
         """

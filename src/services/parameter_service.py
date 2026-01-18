@@ -50,6 +50,17 @@ class ParameterService:
         parameters.sort(key=lambda x: x.get('arn', ''))
         
         return parameters
+
+    def get_parameter(self, param_id: str, custom_prefix: str = '') -> Dict[str, Any]:
+        """
+        Get a single feature flag parameter
+
+        Args:
+            param_id: Parameter identifier
+            custom_prefix: Optional custom prefix within flags
+        """
+        logger.info(f"Getting parameter: {param_id}")
+        return self.repository.get_parameter(param_id=param_id, custom_prefix=custom_prefix)
     
     def list_prefixes(self) -> List[str]:
         """
