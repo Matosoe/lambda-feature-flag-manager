@@ -1,25 +1,53 @@
-.git/
+# Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
+*.py[cod]
+*$py.class
 *.so
-*.egg
-*.egg-info/
-dist/
+.Python
 build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 .pytest_cache/
 .coverage
 htmlcov/
-.env
-.venv
+*.cover
+
+# Virtual Environment
 venv/
+env/
 ENV/
-*.zip
-.DS_Store
-.idea/
+.venv
+
+# IDE
 .vscode/
+.idea/
 *.swp
 *.swo
 *~
+
+# Docker & LocalStack
+localstack-data/
+*.log
+
+# Environment
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# AWS
+.aws/

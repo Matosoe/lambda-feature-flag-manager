@@ -23,13 +23,11 @@ Ideal para funcionalidades liga/desliga.
 curl -X POST https://sua-api.amazonaws.com/parameters \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "dark-mode-enabled",
-    "value": true,
-    "value_type": "boolean",
+    "id": "DARK_MODE_ENABLED",
+    "value": "true",
+    "type": "BOOLEAN",
     "description": "Habilita o modo escuro na interface do usuário",
-    "domain": "user-interface",
-    "enabled": true,
-    "modified_by": "admin@example.com"
+    "lastModifiedBy": "admin@example.com"
   }'
 ```
 
@@ -37,15 +35,14 @@ curl -X POST https://sua-api.amazonaws.com/parameters \
 ```json
 {
   "message": "Parameter created successfully",
-  "name": "/feature-flags/dark-mode-enabled",
+  "id": "DARK_MODE_ENABLED",
   "parameter": {
-    "name": "dark-mode-enabled",
-    "value": true,
+    "id": "DARK_MODE_ENABLED",
+    "value": "true",
+    "type": "BOOLEAN",
     "description": "Habilita o modo escuro na interface do usuário",
-    "domain": "user-interface",
-    "enabled": true,
-    "value_type": "boolean",
-    "modified_by": "admin@example.com"
+    "lastModifiedAt": "2026-01-14T10:00:00Z",
+    "lastModifiedBy": "admin@example.com"
   }
 }
 ```
@@ -61,13 +58,11 @@ Para valores textuais ou modos de operação.
 curl -X POST https://sua-api.amazonaws.com/parameters \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "default-theme",
+    "id": "DEFAULT_THEME",
     "value": "ocean-blue",
-    "value_type": "string",
+    "type": "STRING",
     "description": "Tema padrão da aplicação",
-    "domain": "user-interface",
-    "enabled": true,
-    "modified_by": "design-team@example.com"
+    "lastModifiedBy": "design-team@example.com"
   }'
 ```
 
@@ -82,13 +77,11 @@ Para valores numéricos inteiros como limites, contadores, etc.
 curl -X POST https://sua-api.amazonaws.com/parameters \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "max-upload-size-mb",
-    "value": 50,
-    "value_type": "integer",
+    "id": "MAX_UPLOAD_SIZE_MB",
+    "value": "50",
+    "type": "INTEGER",
     "description": "Tamanho máximo de upload em megabytes",
-    "domain": "file-management",
-    "enabled": true,
-    "modified_by": "backend-team@example.com"
+    "lastModifiedBy": "backend-team@example.com"
   }'
 ```
 
@@ -215,19 +208,11 @@ Para configurações complexas com múltiplos valores.
 curl -X POST https://sua-api.amazonaws.com/parameters \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "payment-gateway-config",
-    "value": {
-      "providers": ["stripe", "paypal", "mercadopago"],
-      "default_provider": "stripe",
-      "retry_attempts": 3,
-      "timeout_seconds": 30,
-      "currencies": ["BRL", "USD", "EUR"]
-    },
-    "value_type": "json",
+    "id": "PAYMENT_GATEWAY_CONFIG",
+    "value": "{\"providers\": [\"stripe\", \"paypal\", \"mercadopago\"], \"default_provider\": \"stripe\", \"retry_attempts\": 3, \"timeout_seconds\": 30, \"currencies\": [\"BRL\", \"USD\", \"EUR\"]}",
+    "type": "JSON",
     "description": "Configuração completa do gateway de pagamentos",
-    "domain": "payments",
-    "enabled": true,
-    "modified_by": "payment-team@example.com"
+    "lastModifiedBy": "payment-team@example.com"
   }'
 ```
 
@@ -240,23 +225,14 @@ class PaymentGateway:
     def __init__(self):
         ssm = boto3.client('ssm')
         response = ssm.get_parameter(
-            Name='/feature-flags/payment-gateway-config',
+            Name='/feature-flags/PAYMENT_GATEWAY_CONFIG',
             WithDecryption=True
         )
         
         param_data = json.loads(response['Parameter']['Value'])
         
-        if param_data['enabled']:
-            self.config = param_data['value']
-        else:
-            # Configuração padrão se desabilitado
-            self.config = {
-                "providers": ["stripe"],
-                "default_provider": "stripe",
-                "retry_attempts": 1,
-                "timeout_seconds": 15,
-                "currencies": ["BRL"]
-            }
+        # Parse o valor JSON armazenado como string
+        self.config = json.loads(param_data['value'])
     
     def process_payment(self, amount, currency):
         if currency not in self.config['currencies']:
@@ -277,40 +253,34 @@ gateway.process_payment(100.00, "BRL")
 
 ## Atualização de Flags
 
-### Desabilitar uma Feature
+### Alterar Valor de uma Feature
 ```bash
-curl -X PUT https://sua-api.amazonaws.com/parameters/dark-mode-enabled \
+curl -X PUT https://sua-api.amazonaws.com/parameters/DARK_MODE_ENABLED \
   -H "Content-Type: application/json" \
   -d '{
-    "enabled": false,
-    "modified_by": "admin@example.com"
+    "value": "false",
+    "lastModifiedBy": "admin@example.com"
   }'
 ```
 
 ### Alterar Valor e Descrição
 ```bash
-curl -X PUT https://sua-api.amazonaws.com/parameters/max-upload-size-mb \
+curl -X PUT https://sua-api.amazonaws.com/parameters/MAX_UPLOAD_SIZE_MB \
   -H "Content-Type: application/json" \
   -d '{
-    "value": 100,
+    "value": "100",
     "description": "Aumentado para 100MB após upgrade do servidor",
-    "modified_by": "devops@example.com"
+    "lastModifiedBy": "devops@example.com"
   }'
 ```
 
 ### Atualizar Configuração JSON Parcialmente
 ```bash
-curl -X PUT https://sua-api.amazonaws.com/parameters/payment-gateway-config \
+curl -X PUT https://sua-api.amazonaws.com/parameters/PAYMENT_GATEWAY_CONFIG \
   -H "Content-Type: application/json" \
   -d '{
-    "value": {
-      "providers": ["stripe", "paypal", "mercadopago", "pix"],
-      "default_provider": "pix",
-      "retry_attempts": 5,
-      "timeout_seconds": 45,
-      "currencies": ["BRL", "USD", "EUR", "ARS"]
-    },
-    "modified_by": "payment-team@example.com"
+    "value": "{\"providers\": [\"stripe\", \"paypal\", \"mercadopago\", \"pix\"], \"default_provider\": \"pix\", \"retry_attempts\": 5, \"timeout_seconds\": 45, \"currencies\": [\"BRL\", \"USD\", \"EUR\", \"ARS\"]}",
+    "lastModifiedBy": "payment-team@example.com"
   }'
 ```
 
@@ -328,54 +298,49 @@ curl -X GET https://sua-api.amazonaws.com/parameters
 {
   "parameters": [
     {
-      "name": "dark-mode-enabled",
-      "full_name": "/feature-flags/dark-mode-enabled",
+      "id": "DARK_MODE_ENABLED",
+      "value": "true",
+      "type": "BOOLEAN",
       "description": "Habilita o modo escuro na interface do usuário",
-      "domain": "user-interface",
-      "last_modified": "2025-12-25T10:30:00.000000",
-      "modified_by": "admin@example.com",
-      "enabled": true,
-      "value_type": "boolean",
-      "value": true
+      "lastModifiedAt": "2026-01-14T10:30:00Z",
+      "lastModifiedBy": "admin@example.com"
     },
     {
-      "name": "max-upload-size-mb",
-      "full_name": "/feature-flags/max-upload-size-mb",
+      "id": "MAX_UPLOAD_SIZE_MB",
+      "value": "100",
+      "type": "INTEGER",
       "description": "Aumentado para 100MB após upgrade do servidor",
-      "domain": "file-management",
-      "last_modified": "2025-12-25T15:45:00.000000",
-      "modified_by": "devops@example.com",
-      "enabled": true,
-      "value_type": "integer",
-      "value": 100
+      "lastModifiedAt": "2026-01-14T15:45:00Z",
+      "lastModifiedBy": "devops@example.com",
+      "previousVersion": {
+        "value": "50",
+        "modifiedAt": "2026-01-10T10:00:00Z",
+        "modifiedBy": "devops@example.com"
+      }
     },
     {
-      "name": "payment-gateway-config",
-      "full_name": "/feature-flags/payment-gateway-config",
+      "id": "PAYMENT_GATEWAY_CONFIG",
+      "value": "{\"providers\": [\"stripe\", \"paypal\", \"mercadopago\", \"pix\"], \"default_provider\": \"pix\", \"retry_attempts\": 5, \"timeout_seconds\": 45, \"currencies\": [\"BRL\", \"USD\", \"EUR\", \"ARS\"]}",
+      "type": "JSON",
       "description": "Configuração completa do gateway de pagamentos",
-      "domain": "payments",
-      "last_modified": "2025-12-25T16:20:00.000000",
-      "modified_by": "payment-team@example.com",
-      "enabled": true,
-      "value_type": "json",
-      "value": {
-        "providers": ["stripe", "paypal", "mercadopago", "pix"],
-        "default_provider": "pix",
-        "retry_attempts": 5,
-        "timeout_seconds": 45,
-        "currencies": ["BRL", "USD", "EUR", "ARS"]
+      "lastModifiedAt": "2026-01-14T16:20:00Z",
+      "lastModifiedBy": "payment-team@example.com",
+      "previousVersion": {
+        "value": "{\"providers\": [\"stripe\", \"paypal\", \"mercadopago\"], \"default_provider\": \"stripe\", \"retry_attempts\": 3, \"timeout_seconds\": 30, \"currencies\": [\"BRL\", \"USD\", \"EUR\"]}",
+        "modifiedAt": "2026-01-12T14:00:00Z",
+        "modifiedBy": "payment-team@example.com"
       }
     }
   ]
 }
 ```
 
-### Filtrar por Domínio (no código)
+### Filtrar Programaticamente (no código)
 ```python
 import boto3
 import json
 
-def get_flags_by_domain(domain):
+def get_flags_by_prefix(prefix):
     ssm = boto3.client('ssm')
     
     # Listar todos os parâmetros
@@ -397,52 +362,52 @@ def get_flags_by_domain(domain):
             )
             param_data = json.loads(response['Parameter']['Value'])
             
-            if param_data.get('domain') == domain:
+            if param_data.get('id', '').startswith(prefix):
                 flags.append({
-                    'name': param['Name'].replace('/feature-flags/', ''),
+                    'id': param_data['id'],
                     'value': param_data['value'],
-                    'enabled': param_data['enabled']
+                    'type': param_data['type']
                 })
     
     return flags
 
 # Uso
-ui_flags = get_flags_by_domain('user-interface')
-print(f"Flags de UI: {ui_flags}")
+max_flags = get_flags_by_prefix('MAX_')
+print(f"Flags MAX_*: {max_flags}")
 ```
 
 ---
 
 ## Boas Práticas
 
-1. **Use domínios consistentes** para agrupar flags relacionadas
-2. **Sempre preencha `modified_by`** para auditoria
-3. **Descreva claramente** o propósito da flag
-4. **Use `enabled: false`** ao invés de deletar flags temporariamente
-5. **Escolha o `value_type` correto** para validação automática
-6. **Documente mudanças importantes** na descrição ao atualizar
+1. **Use IDs descritivos** em UPPER_SNAKE_CASE para fácil identificação
+2. **Sempre preencha `lastModifiedBy`** para auditoria
+3. **Descreva claramente** o propósito do parâmetro
+4. **Escolha o `type` correto** para validação automática
+5. **O sistema mantém automaticamente** o histórico da versão anterior
 
 ---
 
 ## Troubleshooting
 
-### Erro: "Value must be a boolean when value_type is 'boolean'"
-- **Causa**: O valor fornecido não corresponde ao tipo declarado
-- **Solução**: Certifique-se que o valor JSON está correto:
+### Erro: "Value must be a string"
+- **Causa**: O valor fornecido não é uma string
+- **Solução**: Todos os valores devem ser strings no formato JSON:
   ```json
-  {"value": true}  // ✅ Correto
-  {"value": "true"}  // ❌ Errado - string ao invés de boolean
+  {"value": "true"}  // ✅ Correto para boolean
+  {"value": "100"}   // ✅ Correto para integer
+  {"value": true}    // ❌ Errado - deve ser string
   ```
 
-### Erro: "Field 'name' must not contain '/' character"
-- **Causa**: O nome contém barras
-- **Solução**: Use apenas letras, números e hífens:
+### Erro: "Field 'id' is required"
+- **Causa**: O ID não foi fornecido
+- **Solução**: Sempre inclua um ID válido:
   ```json
-  {"name": "my-feature"}  // ✅ Correto
-  {"name": "my/feature"}  // ❌ Errado
+  {"id": "MY_FEATURE"}  // ✅ Correto
+  {"name": "my-feature"}  // ❌ Errado - use 'id'
   ```
 
-### Flag não está sendo aplicada
-- **Verifique**: O campo `enabled` está `true`?
+### Parâmetro não está sendo aplicado
 - **Verifique**: O código está lendo o parâmetro correto?
-- **Verifique**: O timestamp `last_modified` indica quando foi a última mudança
+- **Verifique**: O timestamp `lastModifiedAt` indica quando foi a última mudança
+- **Verifique**: O `type` está correto e o valor está sendo parseado adequadamente

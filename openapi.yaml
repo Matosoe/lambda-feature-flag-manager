@@ -1,0 +1,703 @@
+openapi: 3.0.0
+info:
+  title: Feature Flag Manager API
+  description: |
+    API REST para gerenciamento de feature flags com suporte a usuários e permissões.
+    
+    ## Autenticação
+    Todas as requisições requerem o header `X-User-Id` com o email do usuário.
+    
+    ## Permissões
+    - **leitura**: Visualizar parâmetros e usuários
+    - **escrita**: Criar e atualizar parâmetros
+    - **admin**: Acesso completo incluindo gerenciamento de usuários
+  version: 2.0.0
+  contact:
+    name: Feature Flag Manager
+    email: admin@local.dev
+
+servers:
+  - url: http://localhost:4566/2021-10-31/functions/feature-flag-manager/invocations
+    description: LocalStack (Desenvolvimento Local)
+
+tags:
+  - name: Parameters
+    description: Operações com feature flags
+  - name: Users
+    description: Gerenciamento de usuários e permissões
+  - name: System
+    description: Endpoints do sistema
+
+paths:
+  /:
+    get:
+      tags:
+        - System
+      summary: Documentação Swagger UI
+      description: Retorna a interface web do Swagger UI
+      responses:
+        '200':
+          description: Interface HTML do Swagger UI
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /docs:
+    get:
+      tags:
+        - System
+      summary: Especificação OpenAPI (JSON)
+      description: Retorna a especificação OpenAPI em formato JSON
+      responses:
+        '200':
+          description: Especificação OpenAPI
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /health:
+    get:
+      tags:
+        - System
+      summary: Health Check
+      description: Verifica se a API está funcionando
+      responses:
+        '200':
+          description: API está saudável
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /parameters:
+    get:
+      tags:
+        - Parameters
+      summary: Listar feature flags
+      description: Lista todos os feature flags do Parameter Store
+      security:
+        - UserAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+      responses:
+        '200':
+          description: Lista de parâmetros
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  parameters:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Parameter'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags:
+        - Parameters
+      summary: Criar feature flag
+      description: Cria um novo feature flag com metadados completos
+      security:
+        - UserAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateParameterRequest'
+            examples:
+              boolean:
+                summary: Feature flag booleana
+                value:
+                  id: DARK_MODE
+                  value: "true"
+                  type: BOOLEAN
+                  description: Habilita modo escuro
+                  lastModifiedBy: dev@local.dev
+                  prefix: ui
+              integer:
+                summary: Feature flag numérica
+                value:
+                  id: MAX_RETRY
+                  value: "3"
+                  type: INTEGER
+                  description: Máximo de tentativas
+                  lastModifiedBy: dev@local.dev
+                  prefix: api
+      responses:
+        '201':
+          description: Parâmetro criado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateParameterResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /parameters/{parameterId}:
+    get:
+      tags:
+        - Parameters
+      summary: Obter feature flag específica
+      description: Retorna os detalhes de uma feature flag específica
+      security:
+        - UserAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+        - name: parameterId
+          in: path
+          required: true
+          description: ID do parâmetro
+          schema:
+            type: string
+          example: DARK_MODE
+      responses:
+        '200':
+          description: Detalhes do parâmetro
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Parameter'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    put:
+      tags:
+        - Parameters
+      summary: Atualizar feature flag
+      description: Atualiza uma feature flag existente
+      security:
+        - UserAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+        - name: parameterId
+          in: path
+          required: true
+          description: ID do parâmetro
+          schema:
+            type: string
+          example: DARK_MODE
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateParameterRequest'
+            example:
+              value: "false"
+              description: Modo escuro desabilitado
+              lastModifiedBy: dev@local.dev
+              prefix: ui
+      responses:
+        '200':
+          description: Parâmetro atualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  id:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    delete:
+      tags:
+        - Parameters
+      summary: Deletar feature flag
+      description: Remove uma feature flag do Parameter Store
+      security:
+        - UserAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+        - name: parameterId
+          in: path
+          required: true
+          description: ID do parâmetro
+          schema:
+            type: string
+          example: DARK_MODE
+      responses:
+        '200':
+          description: Parâmetro deletado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /users:
+    get:
+      tags:
+        - Users
+      summary: Listar usuários
+      description: Lista todos os usuários do sistema
+      security:
+        - UserAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+      responses:
+        '200':
+          description: Lista de usuários
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  usuarios:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags:
+        - Users
+      summary: Criar usuário
+      description: Cria um novo usuário (requer permissão admin)
+      security:
+        - UserAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+            example:
+              id: novo.usuario@local.dev
+              nome: Novo Usuário
+              permissoes:
+                leitura: true
+                escrita: false
+                admin: false
+              ativo: true
+      responses:
+        '201':
+          description: Usuário criado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  id:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /users/{userId}:
+    get:
+      tags:
+        - Users
+      summary: Obter usuário específico
+      description: Retorna os detalhes de um usuário
+      security:
+        - UserAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+        - name: userId
+          in: path
+          required: true
+          description: Email do usuário
+          schema:
+            type: string
+          example: dev@local.dev
+      responses:
+        '200':
+          description: Detalhes do usuário
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    put:
+      tags:
+        - Users
+      summary: Atualizar usuário
+      description: Atualiza um usuário existente (requer permissão admin)
+      security:
+        - UserAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+        - name: userId
+          in: path
+          required: true
+          description: Email do usuário
+          schema:
+            type: string
+          example: dev@local.dev
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: Usuário atualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    delete:
+      tags:
+        - Users
+      summary: Deletar usuário
+      description: Remove um usuário do sistema (requer permissão admin)
+      security:
+        - UserAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+        - name: userId
+          in: path
+          required: true
+          description: Email do usuário
+          schema:
+            type: string
+          example: analista@local.dev
+      responses:
+        '200':
+          description: Usuário deletado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  securitySchemes:
+    UserAuth:
+      type: apiKey
+      in: header
+      name: X-User-Id
+      description: Email do usuário para autenticação
+
+  parameters:
+    UserIdHeader:
+      name: X-User-Id
+      in: header
+      required: true
+      description: Email do usuário para autenticação
+      schema:
+        type: string
+        format: email
+      example: dev@local.dev
+
+  schemas:
+    Parameter:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Identificador único do parâmetro
+          example: DARK_MODE
+        value:
+          type: string
+          description: Valor do parâmetro (sempre string)
+          example: "true"
+        type:
+          type: string
+          enum: [BOOLEAN, STRING, INTEGER, DOUBLE, DATE, TIME, DATETIME, JSON]
+          description: Tipo do valor
+          example: BOOLEAN
+        description:
+          type: string
+          description: Descrição do parâmetro
+          example: Habilita modo escuro na interface
+        lastModifiedAt:
+          type: string
+          format: date-time
+          description: Data/hora da última modificação
+          example: "2026-01-14T10:00:00Z"
+        lastModifiedBy:
+          type: string
+          format: email
+          description: Usuário que fez a última modificação
+          example: dev@local.dev
+        previousVersion:
+          type: object
+          nullable: true
+          description: Versão anterior do parâmetro
+          properties:
+            value:
+              type: string
+            lastModifiedAt:
+              type: string
+              format: date-time
+            lastModifiedBy:
+              type: string
+
+    CreateParameterRequest:
+      type: object
+      required:
+        - id
+        - value
+        - type
+        - lastModifiedBy
+      properties:
+        id:
+          type: string
+          description: ID único do parâmetro
+          example: MY_FEATURE
+        value:
+          type: string
+          description: Valor do parâmetro
+          example: "true"
+        type:
+          type: string
+          enum: [BOOLEAN, STRING, INTEGER, DOUBLE, DATE, TIME, DATETIME, JSON]
+          description: Tipo do valor
+          example: BOOLEAN
+        description:
+          type: string
+          description: Descrição do parâmetro
+          example: Minha nova feature
+        lastModifiedBy:
+          type: string
+          format: email
+          description: Email do usuário que está criando
+          example: dev@local.dev
+        prefix:
+          type: string
+          description: Prefixo opcional para organização
+          example: ui
+
+    CreateParameterResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Parameter created successfully
+        id:
+          type: string
+          example: MY_FEATURE
+        parameter:
+          $ref: '#/components/schemas/Parameter'
+
+    UpdateParameterRequest:
+      type: object
+      properties:
+        value:
+          type: string
+          description: Novo valor do parâmetro
+          example: "false"
+        description:
+          type: string
+          description: Nova descrição
+          example: Descrição atualizada
+        lastModifiedBy:
+          type: string
+          format: email
+          description: Email do usuário que está atualizando
+          example: dev@local.dev
+        prefix:
+          type: string
+          description: Prefixo do parâmetro (se foi criado com prefixo)
+          example: ui
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: email
+          description: Email do usuário (identificador único)
+          example: dev@local.dev
+        nome:
+          type: string
+          description: Nome completo do usuário
+          example: Desenvolvedor
+        permissoes:
+          type: object
+          description: Permissões do usuário
+          properties:
+            leitura:
+              type: boolean
+              description: Pode visualizar parâmetros e usuários
+            escrita:
+              type: boolean
+              description: Pode criar e atualizar parâmetros
+            admin:
+              type: boolean
+              description: Acesso completo incluindo gerenciamento de usuários
+          example:
+            leitura: true
+            escrita: true
+            admin: false
+        ativo:
+          type: boolean
+          description: Se o usuário está ativo
+          example: true
+
+    CreateUserRequest:
+      type: object
+      required:
+        - id
+        - nome
+        - permissoes
+        - ativo
+      properties:
+        id:
+          type: string
+          format: email
+          description: Email do usuário
+          example: novo@local.dev
+        nome:
+          type: string
+          description: Nome completo
+          example: Novo Usuário
+        permissoes:
+          type: object
+          required:
+            - leitura
+            - escrita
+            - admin
+          properties:
+            leitura:
+              type: boolean
+            escrita:
+              type: boolean
+            admin:
+              type: boolean
+        ativo:
+          type: boolean
+          description: Se o usuário está ativo
+          example: true
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        nome:
+          type: string
+          description: Nome completo
+        permissoes:
+          type: object
+          properties:
+            leitura:
+              type: boolean
+            escrita:
+              type: boolean
+            admin:
+              type: boolean
+        ativo:
+          type: boolean
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Mensagem de erro
+          example: Validation error
+
+  responses:
+    BadRequest:
+      description: Requisição inválida
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Validation error
+
+    Forbidden:
+      description: Permissão negada
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Insufficient permissions
+
+    NotFound:
+      description: Recurso não encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Parameter not found
+
+    InternalError:
+      description: Erro interno do servidor
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Internal server error

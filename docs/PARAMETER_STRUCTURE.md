@@ -8,126 +8,142 @@ Cada feature flag (parâmetro) agora possui uma estrutura JSON padronizada que i
 
 ```json
 {
-  "description": "Descrição da feature flag",
-  "domain": "Domínio ou área de negócio",
-  "last_modified": "2025-12-25T10:30:00.000000",
-  "modified_by": "usuario@exemplo.com",
-  "enabled": true,
-  "value_type": "boolean",
-  "value": true
+  "id": "MAX_RETRY_COUNT",
+  "value": "5",
+  "type": "INTEGER",
+  "description": "Número máximo de tentativas de retry",
+  "lastModifiedAt": "2026-01-07T10:30:00Z",
+  "lastModifiedBy": "joao.silva",
+  "previousVersion": {
+    "value": "3",
+    "modifiedAt": "2026-01-05T08:00:00Z",
+    "modifiedBy": "maria.santos"
+  }
 }
 ```
 
 ## Campos
 
-### 1. **description** (string)
-- **Descrição**: Descrição detalhada da feature flag
-- **Obrigatório**: Não (padrão: string vazia)
-- **Exemplo**: `"Habilita novo sistema de pagamentos"`
-
-### 2. **domain** (string)
-- **Descrição**: Domínio ou área de negócio à qual a flag pertence
-- **Obrigatório**: Não (padrão: string vazia)
-- **Exemplo**: `"pagamentos"`, `"user-interface"`, `"backend-services"`
-
-### 3. **last_modified** (string, ISO 8601)
-- **Descrição**: Timestamp da última alteração ou criação
-- **Obrigatório**: Sim (gerado automaticamente)
-- **Formato**: ISO 8601 UTC
-- **Exemplo**: `"2025-12-25T10:30:00.000000"`
-
-### 4. **modified_by** (string)
-- **Descrição**: Identificador do usuário que criou ou modificou o parâmetro
-- **Obrigatório**: Não (padrão: string vazia)
-- **Exemplo**: `"admin@exemplo.com"`, `"usuario123"`
-
-### 5. **enabled** (boolean)
-- **Descrição**: Indica se a feature flag está ativa ou não
-- **Obrigatório**: Não (padrão: `true`)
-- **Valores**: `true` ou `false`
-
-### 6. **value_type** (string)
-- **Descrição**: Tipo do valor armazenado
-- **Obrigatório**: Não (padrão: `"string"`)
-- **Valores válidos**:
-  - `"boolean"` - Valor booleano (true/false)
-  - `"string"` - Texto
-  - `"integer"` - Número inteiro
-  - `"double"` - Número decimal
-  - `"date"` - Data (formato string ISO)
-  - `"time"` - Hora (formato string)
-  - `"datetime"` - Data e hora (formato string ISO)
-  - `"json"` - Objeto JSON ou array
-
-### 7. **value** (any)
-- **Descrição**: O valor real da feature flag
+### 1. **id** (string)
+- **Descrição**: Identificador único do parâmetro
 - **Obrigatório**: Sim
-- **Tipo**: Depende do campo `value_type`
+- **Exemplo**: `"MAX_RETRY_COUNT"`, `"DARK_MODE_ENABLED"`
+
+### 2. **value** (string)
+- **Descrição**: O valor real da feature flag (sempre armazenado como string)
+- **Obrigatório**: Sim
 - **Exemplos**:
-  - Boolean: `true`, `false`
+  - Boolean: `"true"`, `"false"`
   - String: `"modo-escuro"`
-  - Integer: `100`
-  - Double: `3.14`
+  - Integer: `"100"`
+  - Double: `"3.14"`
   - Date: `"2025-12-25"`
   - Time: `"14:30:00"`
   - DateTime: `"2025-12-25T14:30:00Z"`
-  - JSON: `{"opcao1": true, "opcao2": "valor"}`
+  - JSON: `"{\"opcao1\": true, \"opcao2\": \"valor\"}"`
+
+### 3. **type** (string)
+- **Descrição**: Tipo do valor armazenado
+- **Obrigatório**: Sim
+- **Valores válidos**:
+  - `"BOOLEAN"` - Valor booleano (true/false)
+  - `"STRING"` - Texto
+  - `"INTEGER"` - Número inteiro
+  - `"DOUBLE"` - Número decimal
+  - `"DATE"` - Data (formato string ISO)
+  - `"TIME"` - Hora (formato string)
+  - `"DATETIME"` - Data e hora (formato string ISO)
+  - `"JSON"` - Objeto JSON ou array
+
+### 4. **description** (string)
+- **Descrição**: Descrição detalhada da feature flag
+- **Obrigatório**: Não (padrão: string vazia)
+- **Exemplo**: `"Número máximo de tentativas de retry"`
+
+### 5. **lastModifiedAt** (string, ISO 8601)
+- **Descrição**: Timestamp da última alteração ou criação
+- **Obrigatório**: Sim (gerado automaticamente)
+- **Formato**: ISO 8601 UTC com Z
+- **Exemplo**: `"2026-01-07T10:30:00Z"`
+
+### 6. **lastModifiedBy** (string)
+- **Descrição**: Identificador do usuário que criou ou modificou o parâmetro
+- **Obrigatório**: Não (padrão: string vazia)
+- **Exemplo**: `"joao.silva"`, `"admin@exemplo.com"`
+
+### 7. **previousVersion** (object)
+- **Descrição**: Versão anterior do parâmetro para histórico de mudanças
+- **Obrigatório**: Não (ausente na criação)
+- **Campos**:
+  - `value` (string): Valor anterior
+  - `modifiedAt` (string): Timestamp da modificação anterior
+  - `modifiedBy` (string): Usuário que fez a modificação anterior
+- **Exemplo**: 
+  ```json
+  {
+    "value": "3",
+    "modifiedAt": "2026-01-05T08:00:00Z",
+    "modifiedBy": "maria.santos"
+  }
+  ```
 
 ## Exemplos de Uso
 
 ### Exemplo 1: Feature Flag Booleana
 ```json
 {
-  "name": "dark-mode-enabled",
-  "value": true,
-  "value_type": "boolean",
+  "id": "DARK_MODE_ENABLED",
+  "value": "true",
+  "type": "BOOLEAN",
   "description": "Habilita o modo escuro na interface",
-  "domain": "user-interface",
-  "enabled": true,
-  "modified_by": "admin@exemplo.com"
+  "lastModifiedAt": "2026-01-14T10:00:00Z",
+  "lastModifiedBy": "admin@exemplo.com"
 }
 ```
 
 ### Exemplo 2: Feature Flag com Valor Numérico
 ```json
 {
-  "name": "max-upload-size",
-  "value": 10485760,
-  "value_type": "integer",
+  "id": "MAX_UPLOAD_SIZE",
+  "value": "10485760",
+  "type": "INTEGER",
   "description": "Tamanho máximo de upload em bytes (10MB)",
-  "domain": "file-management",
-  "enabled": true,
-  "modified_by": "devops@exemplo.com"
+  "lastModifiedAt": "2026-01-14T11:00:00Z",
+  "lastModifiedBy": "devops@exemplo.com"
 }
 ```
 
 ### Exemplo 3: Feature Flag com Configuração JSON
 ```json
 {
-  "name": "payment-config",
-  "value": {
-    "providers": ["stripe", "paypal"],
-    "default_currency": "BRL",
-    "timeout_seconds": 30
-  },
-  "value_type": "json",
+  "id": "PAYMENT_CONFIG",
+  "value": "{\"providers\": [\"stripe\", \"paypal\"], \"default_currency\": \"BRL\", \"timeout_seconds\": 30}",
+  "type": "JSON",
   "description": "Configuração do sistema de pagamentos",
-  "domain": "payments",
-  "enabled": true,
-  "modified_by": "admin@exemplo.com"
+  "lastModifiedAt": "2026-01-14T12:00:00Z",
+  "lastModifiedBy": "admin@exemplo.com",
+  "previousVersion": {
+    "value": "{\"providers\": [\"stripe\"], \"default_currency\": \"BRL\", \"timeout_seconds\": 15}",
+    "modifiedAt": "2026-01-10T09:00:00Z",
+    "modifiedBy": "tech.lead"
+  }
 }
 ```
 
-### Exemplo 4: Feature Flag Desabilitada
+### Exemplo 4: Feature Flag com Histórico de Versão
 ```json
 {
-  "name": "experimental-feature",
+  "id": "EXPERIMENTAL_FEATURE",
   "value": "beta-mode",
-  "value_type": "string",
+  "type": "STRING",
   "description": "Funcionalidade experimental em desenvolvimento",
-  "domain": "experimental",
-  "enabled": false,
-  "modified_by": "developer@exemplo.com"
+  "lastModifiedAt": "2026-01-14T13:00:00Z",
+  "lastModifiedBy": "developer@exemplo.com",
+  "previousVersion": {
+    "value": "alpha-mode",
+    "modifiedAt": "2026-01-12T10:00:00Z",
+    "modifiedBy": "developer@exemplo.com"
+  }
 }
 ```
 
@@ -139,26 +155,23 @@ POST /parameters
 Content-Type: application/json
 
 {
-  "name": "minha-flag",
-  "value": true,
-  "value_type": "boolean",
+  "id": "MINHA_FLAG",
+  "value": "true",
+  "type": "BOOLEAN",
   "description": "Descrição da flag",
-  "domain": "meu-dominio",
-  "enabled": true,
-  "modified_by": "usuario@exemplo.com"
+  "lastModifiedBy": "usuario@exemplo.com"
 }
 ```
 
 ### Atualizar Parâmetro
 ```bash
-PUT /parameters/{nome}
+PUT /parameters/{id}
 Content-Type: application/json
 
 {
-  "value": false,
+  "value": "false",
   "description": "Nova descrição",
-  "enabled": false,
-  "modified_by": "usuario@exemplo.com"
+  "lastModifiedBy": "usuario@exemplo.com"
 }
 ```
 
@@ -172,15 +185,17 @@ Resposta:
 {
   "parameters": [
     {
-      "name": "minha-flag",
-      "full_name": "/feature-flags/minha-flag",
-      "description": "Descrição da flag",
-      "domain": "meu-dominio",
-      "last_modified": "2025-12-25T10:30:00.000000",
-      "modified_by": "usuario@exemplo.com",
-      "enabled": true,
-      "value_type": "boolean",
-      "value": true
+      "id": "MINHA_FLAG",
+      "value": "false",
+      "type": "BOOLEAN",
+      "description": "Nova descrição",
+      "lastModifiedAt": "2026-01-14T14:00:00Z",
+      "lastModifiedBy": "usuario@exemplo.com",
+      "previousVersion": {
+        "value": "true",
+        "modifiedAt": "2026-01-14T10:00:00Z",
+        "modifiedBy": "usuario@exemplo.com"
+      }
     }
   ]
 }
@@ -190,25 +205,27 @@ Resposta:
 
 O sistema valida automaticamente:
 
-1. **Tipo do valor** deve corresponder ao `value_type` especificado
-2. **value_type** deve ser um dos tipos válidos
-3. **enabled** deve ser booleano quando fornecido
-4. **name** não pode conter caractere `/`
-5. Campos de texto como `description`, `domain`, `modified_by` devem ser strings
+1. **id** é obrigatório e deve ser uma string válida
+2. **value** é obrigatório e deve ser uma string
+3. **type** deve ser um dos tipos válidos (BOOLEAN, STRING, INTEGER, DOUBLE, DATE, TIME, DATETIME, JSON)
+4. **description** e **lastModifiedBy** devem ser strings quando fornecidos
+5. **lastModifiedAt** é gerado automaticamente no formato ISO 8601
+6. **previousVersion** é opcional e, quando presente, deve conter os campos value, modifiedAt e modifiedBy
 
 ## Retrocompatibilidade
 
 O sistema mantém retrocompatibilidade com parâmetros antigos que não seguem a estrutura JSON. Quando um parâmetro antigo é lido:
 
-- O valor é retornado no campo `value`
+- O valor é retornado no campo `value` como string
 - Campos ausentes recebem valores padrão
-- `value_type` é definido como `"string"`
-- `enabled` é definido como `true`
+- `type` é definido como `"STRING"`
+- `lastModifiedAt` usa o timestamp do Parameter Store
+- `previousVersion` não é incluído
 
 ## Boas Práticas
 
-1. **Sempre especifique o `value_type`** correto para aproveitar a validação de tipos
-2. **Use `domain`** para organizar flags por área de negócio
-3. **Preencha `modified_by`** para rastreabilidade
-4. **Use `description`** detalhada para documentar o propósito da flag
-5. **Use `enabled`** para desativar flags temporariamente sem deletá-las
+1. **Use IDs descritivos** em UPPER_SNAKE_CASE (ex: MAX_RETRY_COUNT, DARK_MODE_ENABLED)
+2. **Sempre especifique o `type`** correto para aproveitar a validação de tipos
+3. **Preencha `lastModifiedBy`** para rastreabilidade de mudanças
+4. **Use `description`** detalhada para documentar o propósito do parâmetro
+5. **O sistema mantém automaticamente** o histórico da versão anterior em `previousVersion`

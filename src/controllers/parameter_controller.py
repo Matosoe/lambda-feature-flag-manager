@@ -56,24 +56,22 @@ class ParameterController:
             
             self.validator.validate_create(body)
             
-            name = body['name']
+            param_id = body['id']
             value = body['value']
+            param_type = body['type']
             description = body.get('description', '')
-            domain = body.get('domain', '')
-            enabled = body.get('enabled', True)
-            value_type = body.get('value_type', 'string')
-            modified_by = body.get('modified_by', '')
-            parameter_type = body.get('type', 'String')
+            last_modified_by = body.get('lastModifiedBy', '')
+            parameter_store_type = body.get('parameterStoreType', 'String')
+            custom_prefix = body.get('prefix', '')  # Optional custom prefix
             
             self.service.create_parameter(
-                name=name,
+                param_id=param_id,
                 value=value,
+                param_type=param_type,
                 description=description,
-                domain=domain,
-                enabled=enabled,
-                value_type=value_type,
-                modified_by=modified_by,
-                parameter_type=parameter_type
+                last_modified_by=last_modified_by,
+                parameter_store_type=parameter_store_type,
+                custom_prefix=custom_prefix
             )
             
             return {
@@ -81,15 +79,13 @@ class ParameterController:
                 'headers': {'Content-Type': 'application/json'},
                 'body': json.dumps({
                     'message': 'Parameter created successfully',
-                    'name': f'/feature-flags/{name}',
+                    'id': param_id,
                     'parameter': {
-                        'name': name,
+                        'id': param_id,
                         'value': value,
+                        'type': param_type,
                         'description': description,
-                        'domain': domain,
-                        'enabled': enabled,
-                        'value_type': value_type,
-                        'modified_by': modified_by
+                        'lastModifiedBy': last_modified_by
                     }
                 })
             }
@@ -99,13 +95,13 @@ class ParameterController:
             logger.error(f"Error creating parameter: {str(e)}")
             raise
     
-    def update_parameter(self, event: Dict[str, Any], parameter_name: str) -> Dict[str, Any]:
+    def update_parameter(self, event: Dict[str, Any], parameter_id: str) -> Dict[str, Any]:
         """
         Update an existing feature flag parameter
         
         Args:
             event: API Gateway event
-            parameter_name: Name of parameter to update
+            parameter_id: ID of parameter to update
             
         Returns:
             API Gateway response
@@ -117,19 +113,17 @@ class ParameterController:
             
             value = body.get('value')
             description = body.get('description')
-            domain = body.get('domain')
-            enabled = body.get('enabled')
-            value_type = body.get('value_type')
-            modified_by = body.get('modified_by')
+            param_type = body.get('type')
+            last_modified_by = body.get('lastModifiedBy')
+            custom_prefix = body.get('prefix', '')  # Optional custom prefix
             
             self.service.update_parameter(
-                name=parameter_name,
+                param_id=parameter_id,
                 value=value,
                 description=description,
-                domain=domain,
-                enabled=enabled,
-                value_type=value_type,
-                modified_by=modified_by
+                param_type=param_type,
+                last_modified_by=last_modified_by,
+                custom_prefix=custom_prefix
             )
             
             return {
@@ -137,7 +131,7 @@ class ParameterController:
                 'headers': {'Content-Type': 'application/json'},
                 'body': json.dumps({
                     'message': 'Parameter updated successfully',
-                    'name': f'/feature-flags/{parameter_name}'
+                    'id': parameter_id
                 })
             }
         except ValidationError:

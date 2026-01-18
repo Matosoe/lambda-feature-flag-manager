@@ -3,8 +3,10 @@ Parameter Repository following Single Responsibility Principle
 Data access layer for AWS Parameter Store
 """
 import logging
-import boto3import json
-from datetime import datetimefrom typing import List, Dict, Any, Optional
+import boto3
+import json
+from datetime import datetime
+from typing import List, Dict, Any, Optional
 from botocore.exceptions import ClientError
 from src.exceptions import ParameterStoreError, ParameterNotFoundError
 
@@ -19,7 +21,8 @@ class ParameterRepository:
     
     def __init__(self):
         self.ssm_client = boto3.client('ssm')
-        self.prefix = '/feature-flags'
+        self.prefix = '/feature-flags/flags'
+        self.users_path = '/feature-flags/users'
     
     def get_all_parameters(self) -> List[Dict[str, Any]]:
         """
@@ -55,41 +58,35 @@ class ParameterRepository:
                         try:
                             param_data = json.loads(param_value)
                             param_detail = {
-                                'name': param['Name'].replace(f'{self.prefix}/', ''),
-                                'full_name': param['Name'],
+                                'id': param_data.get('id', param['Name'].replace(f'{self.prefix}/', '')),
+                                'value': param_data.get('value', ''),
+                                'type': param_data.get('type', 'STRING'),
                                 'description': param_data.get('description', ''),
-                                'domain': param_data.get('domain', ''),
-                                'last_modified': param_data.get('last_modified', param['LastModifiedDate'].isoformat()),
-                                'modified_by': param_data.get('modified_by', ''),
-                                'enabled': param_data.get('enabled', True),
-                                'value_type': param_data.get('value_type', 'string'),
-                                'value': param_data.get('value')
+                                'lastModifiedAt': param_data.get('lastModifiedAt', param['LastModifiedDate'].isoformat()),
+                                'lastModifiedBy': param_data.get('lastModifiedBy', '')
                             }
+                            # Include previousVersion if present
+                            if 'previousVersion' in param_data:
+                                param_detail['previousVersion'] = param_data['previousVersion']
                         except (json.JSONDecodeError, TypeError):
                             # Fallback for old format parameters
                             param_detail = {
-                                'name': param['Name'].replace(f'{self.prefix}/', ''),
-                                'full_name': param['Name'],
+                                'id': param['Name'].replace(f'{self.prefix}/', ''),
+                                'value': param_value,
+                                'type': 'STRING',
                                 'description': param.get('Description', ''),
-                                'domain': '',
-                                'last_modified': param['LastModifiedDate'].isoformat(),
-                                'modified_by': '',
-                                'enabled': True,
-                                'value_type': 'string',
-                                'value': param_value
+                                'lastModifiedAt': param['LastModifiedDate'].isoformat(),
+                                'lastModifiedBy': ''
                             }
                     except ClientError as e:
                         logger.warning(f"Could not retrieve value for {param['Name']}: {str(e)}")
                         param_detail = {
-                            'name': param['Name'].replace(f'{self.prefix}/', ''),
-                            'full_name': param['Name'],
+                            'id': param['Name'].replace(f'{self.prefix}/', ''),
+                            'value': '',
+                            'type': 'STRING',
                             'description': param.get('Description', ''),
-                            'domain': '',
-                            'last_modified': param['LastModifiedDate'].isoformat(),
-                            'modified_by': '',
-                            'enabled': False,
-                            'value_type': 'string',
-                            'value': None
+                            'lastModifiedAt': param['LastModifiedDate'].isoformat(),
+                            'lastModifiedBy': ''
                         }
                     
                     parameters.append(param_detail)
@@ -102,83 +99,90 @@ class ParameterRepository:
     
     def create_parameter(
         self,
-        name: str,
-        value: Any,
+        param_id: str,
+        value: str,
+        param_type: str = 'STRING',
         description: str = '',
-        domain: str = '',
-        enabled: bool = True,
-        value_type: str = 'string',
-        modified_by: str = '',
-        parameter_type: str = 'String'
+        last_modified_by: str = '',
+        parameter_store_type: str = 'String',
+        custom_prefix: str = ''
     ) -> None:
         """
         Create a new parameter in Parameter Store with structured JSON format
         
         Args:
-            name: Full parameter name (with prefix)
-            value: Parameter value
+            param_id: Parameter identifier (used as name)
+            value: Parameter value (as string)
+            param_type: Type of the value (BOOLEAN, STRING, INTEGER, DOUBLE, DATE, TIME, DATETIME, JSON)
             description: Parameter description
-            domain: Parameter domain
-            enabled: Whether the flag is enabled
-            value_type: Type of the value (boolean, string, integer, double, date, time, json)
-            modified_by: User who created the parameter
-            parameter_type: AWS Parameter type (String, StringList, SecureString)
+            last_modified_by: User who created the parameter
+            parameter_store_type: AWS Parameter type (String, StringList, SecureString)
+            custom_prefix: Optional custom prefix within flags (e.g., 'api', 'ui')
         """
         try:
             # Create structured JSON value
             param_data = {
+                'id': param_id,
+                'value': value,
+                'type': param_type,
                 'description': description,
-                'domain': domain,
-                'last_modified': datetime.utcnow().isoformat(),
-                'modified_by': modified_by,
-                'enabled': enabled,
-                'value_type': value_type,
-                'value': value
+                'lastModifiedAt': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+                'lastModifiedBy': last_modified_by
             }
             
             json_value = json.dumps(param_data)
             
+            # Build full name with custom prefix if provided
+            if custom_prefix:
+                full_name = f'{self.prefix}/{custom_prefix}/{param_id}'
+            else:
+                full_name = f'{self.prefix}/{param_id}'
+            
             self.ssm_client.put_parameter(
-                Name=name,
+                Name=full_name,
                 Value=json_value,
                 Description=description,
-                Type=parameter_type,
+                Type=parameter_store_type,
                 Overwrite=False
             )
-            logger.info(f"Successfully created parameter: {name}")
+            logger.info(f"Successfully created parameter: {full_name}")
             
         except ClientError as e:
             error_code = e.response.get('Error', {}).get('Code', '')
             if error_code == 'ParameterAlreadyExists':
-                raise ParameterStoreError(f"Parameter {name} already exists")
+                raise ParameterStoreError(f"Parameter {param_id} already exists")
             logger.error(f"Error creating parameter: {str(e)}")
             raise ParameterStoreError(f"Failed to create parameter: {str(e)}")
     
     def update_parameter(
         self,
-        name: str,
-        value: Optional[Any] = None,
+        param_id: str,
+        value: Optional[str] = None,
         description: Optional[str] = None,
-        domain: Optional[str] = None,
-        enabled: Optional[bool] = None,
-        value_type: Optional[str] = None,
-        modified_by: Optional[str] = None
+        param_type: Optional[str] = None,
+        last_modified_by: Optional[str] = None,
+        custom_prefix: str = ''
     ) -> None:
         """
-        Update an existing parameter maintaining JSON structure
+        Update an existing parameter maintaining JSON structure and keeping previous version
         
         Args:
-            name: Full parameter name (with prefix)
-            value: New parameter value (optional)
+            param_id: Parameter identifier
+            value: New parameter value (optional, as string)
             description: New parameter description (optional)
-            domain: New parameter domain (optional)
-            enabled: New enabled status (optional)
-            value_type: New value type (optional)
-            modified_by: User who modified the parameter
+            param_type: New parameter type (optional)
+            last_modified_by: User who modified the parameter
+            custom_prefix: Optional custom prefix within flags
         """
         try:
+            # Build full parameter name
+            if custom_prefix:
+                full_name = f'{self.prefix}/{custom_prefix}/{param_id}'
+            else:
+                full_name = f'{self.prefix}/{param_id}'
+            
             # Get current parameter
-            current_param = self.ssm_client.get_parameter(Name=name, WithDecryption=True)
+            current_param = self.ssm_client.get_parameter(Name=full_name, WithDecryption=True)
             current_value = current_param['Parameter']['Value']
             
             # Try to parse existing JSON structure
@@ -187,45 +191,48 @@ class ParameterRepository:
             except (json.JSONDecodeError, TypeError):
                 # If not JSON, create new structure with current value
                 param_data = {
+                    'id': param_id,
+                    'value': value if value is not None else current_value,
+                    'type': param_type or 'STRING',
                     'description': description or '',
-                    'domain': domain or '',
-                    'last_modified': datetime.utcnow().isoformat(),
-                    'modified_by': modified_by or '',
-                    'enabled': enabled if enabled is not None else True,
-                    'value_type': value_type or 'string',
-                    'value': value if value is not None else current_value
+                    'lastModifiedAt': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+                    'lastModifiedBy': last_modified_by or ''
                 }
             else:
+                # Save current version as previousVersion before updating
+                if value is not None and value != param_data.get('value'):
+                    param_data['previousVersion'] = {
+                        'value': param_data.get('value', ''),
+                        'modifiedAt': param_data.get('lastModifiedAt', ''),
+                        'modifiedBy': param_data.get('lastModifiedBy', '')
+                    }
+                
                 # Update only provided fields
                 if value is not None:
                     param_data['value'] = value
                 if description is not None:
                     param_data['description'] = description
-                if domain is not None:
-                    param_data['domain'] = domain
-                if enabled is not None:
-                    param_data['enabled'] = enabled
-                if value_type is not None:
-                    param_data['value_type'] = value_type
-                if modified_by is not None:
-                    param_data['modified_by'] = modified_by
+                if param_type is not None:
+                    param_data['type'] = param_type
+                if last_modified_by is not None:
+                    param_data['lastModifiedBy'] = last_modified_by
                 
-                param_data['last_modified'] = datetime.utcnow().isoformat()
+                param_data['lastModifiedAt'] = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
             
             json_value = json.dumps(param_data)
             
             self.ssm_client.put_parameter(
-                Name=name,
+                Name=full_name,
                 Value=json_value,
                 Description=param_data.get('description', ''),
                 Type=current_param['Parameter']['Type'],
                 Overwrite=True
             )
-            logger.info(f"Updated parameter: {name}")
+            logger.info(f"Updated parameter: {full_name}")
                 
         except ClientError as e:
             error_code = e.response.get('Error', {}).get('Code', '')
             if error_code == 'ParameterNotFound':
-                raise ParameterNotFoundError(f"Parameter {name} not found")
+                raise ParameterNotFoundError(f"Parameter {param_id} not found")
             logger.error(f"Error updating parameter: {str(e)}")
             raise ParameterStoreError(f"Failed to update parameter: {str(e)}")

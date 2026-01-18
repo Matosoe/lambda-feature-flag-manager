@@ -11,7 +11,7 @@ class ParameterValidator:
     """
     
     VALID_TYPES = ['String', 'StringList', 'SecureString']
-    VALID_VALUE_TYPES = ['boolean', 'string', 'integer', 'double', 'date', 'time', 'datetime', 'json']
+    VALID_PARAM_TYPES = ['BOOLEAN', 'STRING', 'INTEGER', 'DOUBLE', 'DATE', 'TIME', 'DATETIME', 'JSON']
     
     def validate_create(self, data: Dict[str, Any]) -> None:
         """
@@ -26,38 +26,36 @@ class ParameterValidator:
         if not data:
             raise ValidationError("Request body is required")
         
-        if 'name' not in data:
-            raise ValidationError("Field 'name' is required")
+        if 'id' not in data:
+            raise ValidationError("Field 'id' is required")
         
         if 'value' not in data:
             raise ValidationError("Field 'value' is required")
         
-        name = data['name']
-        if not isinstance(name, str) or not name.strip():
-            raise ValidationError("Field 'name' must be a non-empty string")
+        if 'type' not in data:
+            raise ValidationError("Field 'type' is required")
         
-        if '/' in name:
-            raise ValidationError("Field 'name' must not contain '/' character")
+        param_id = data['id']
+        if not isinstance(param_id, str) or not param_id.strip():
+            raise ValidationError("Field 'id' must be a non-empty string")
         
-        # Value can be any type depending on value_type
+        # Value must be a string
         value = data['value']
+        if not isinstance(value, str):
+            raise ValidationError("Field 'value' must be a string")
         
-        # Validate value_type if provided
-        if 'value_type' in data:
-            value_type = data['value_type']
-            if value_type not in self.VALID_VALUE_TYPES:
-                raise ValidationError(
-                    f"Field 'value_type' must be one of: {', '.join(self.VALID_VALUE_TYPES)}"
-                )
-            
-            # Validate value matches value_type
-            self._validate_value_type(value, value_type)
+        # Validate type
+        param_type = data['type']
+        if param_type not in self.VALID_PARAM_TYPES:
+            raise ValidationError(
+                f"Field 'type' must be one of: {', '.join(self.VALID_PARAM_TYPES)}"
+            )
         
-        if 'type' in data:
-            parameter_type = data['type']
+        if 'parameterStoreType' in data:
+            parameter_type = data['parameterStoreType']
             if parameter_type not in self.VALID_TYPES:
                 raise ValidationError(
-                    f"Field 'type' must be one of: {', '.join(self.VALID_TYPES)}"
+                    f"Field 'parameterStoreType' must be one of: {', '.join(self.VALID_TYPES)}"
                 )
         
         if 'description' in data:
@@ -65,50 +63,10 @@ class ParameterValidator:
             if not isinstance(description, str):
                 raise ValidationError("Field 'description' must be a string")
         
-        if 'domain' in data:
-            domain = data['domain']
-            if not isinstance(domain, str):
-                raise ValidationError("Field 'domain' must be a string")
-        
-        if 'enabled' in data:
-            enabled = data['enabled']
-            if not isinstance(enabled, bool):
-                raise ValidationError("Field 'enabled' must be a boolean")
-        
-        if 'modified_by' in data:
-            modified_by = data['modified_by']
-            if not isinstance(modified_by, str):
-                raise ValidationError("Field 'modified_by' must be a string")
-    
-    def _validate_value_type(self, value: Any, value_type: str) -> None:
-        """
-        Validate that value matches the specified value_type
-        
-        Args:
-            value: The value to validate
-            value_type: The expected type
-            
-        Raises:
-            ValidationError: If value doesn't match value_type
-        """
-        if value_type == 'boolean':
-            if not isinstance(value, bool):
-                raise ValidationError("Value must be a boolean when value_type is 'boolean'")
-        elif value_type == 'string':
-            if not isinstance(value, str):
-                raise ValidationError("Value must be a string when value_type is 'string'")
-        elif value_type == 'integer':
-            if not isinstance(value, int) or isinstance(value, bool):
-                raise ValidationError("Value must be an integer when value_type is 'integer'")
-        elif value_type == 'double':
-            if not isinstance(value, (int, float)) or isinstance(value, bool):
-                raise ValidationError("Value must be a number when value_type is 'double'")
-        elif value_type in ['date', 'time', 'datetime']:
-            if not isinstance(value, str):
-                raise ValidationError(f"Value must be a string when value_type is '{value_type}'")
-        elif value_type == 'json':
-            if not isinstance(value, (dict, list)):
-                raise ValidationError("Value must be an object or array when value_type is 'json'")
+        if 'lastModifiedBy' in data:
+            last_modified_by = data['lastModifiedBy']
+            if not isinstance(last_modified_by, str):
+                raise ValidationError("Field 'lastModifiedBy' must be a string")
     
     def validate_update(self, data: Dict[str, Any]) -> None:
         """
@@ -123,37 +81,29 @@ class ParameterValidator:
         if not data:
             raise ValidationError("Request body is required")
         
-        if not any(key in data for key in ['value', 'description', 'domain', 'enabled', 'value_type', 'modified_by']):
+        if not any(key in data for key in ['value', 'description', 'type', 'lastModifiedBy']):
             raise ValidationError(
-                "At least one of 'value', 'description', 'domain', 'enabled', 'value_type', or 'modified_by' must be provided"
+                "At least one of 'value', 'description', 'type', or 'lastModifiedBy' must be provided"
             )
         
-        if 'value' in data and 'value_type' in data:
-            self._validate_value_type(data['value'], data['value_type'])
+        if 'value' in data:
+            value = data['value']
+            if not isinstance(value, str):
+                raise ValidationError("Field 'value' must be a string")
         
         if 'description' in data:
             description = data['description']
             if not isinstance(description, str):
                 raise ValidationError("Field 'description' must be a string")
         
-        if 'domain' in data:
-            domain = data['domain']
-            if not isinstance(domain, str):
-                raise ValidationError("Field 'domain' must be a string")
-        
-        if 'enabled' in data:
-            enabled = data['enabled']
-            if not isinstance(enabled, bool):
-                raise ValidationError("Field 'enabled' must be a boolean")
-        
-        if 'value_type' in data:
-            value_type = data['value_type']
-            if value_type not in self.VALID_VALUE_TYPES:
+        if 'type' in data:
+            param_type = data['type']
+            if param_type not in self.VALID_PARAM_TYPES:
                 raise ValidationError(
-                    f"Field 'value_type' must be one of: {', '.join(self.VALID_VALUE_TYPES)}"
+                    f"Field 'type' must be one of: {', '.join(self.VALID_PARAM_TYPES)}"
                 )
         
-        if 'modified_by' in data:
-            modified_by = data['modified_by']
-            if not isinstance(modified_by, str):
-                raise ValidationError("Field 'modified_by' must be a string")
+        if 'lastModifiedBy' in data:
+            last_modified_by = data['lastModifiedBy']
+            if not isinstance(last_modified_by, str):
+                raise ValidationError("Field 'lastModifiedBy' must be a string")

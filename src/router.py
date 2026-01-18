@@ -5,22 +5,34 @@ import json
 import logging
 from typing import Dict, Any
 from src.controllers.parameter_controller import ParameterController
+from src.controllers.user_controller import UserController
 from src.services.parameter_service import ParameterService
+from src.services.user_service import UserService
+from src.repositories.user_repository import UserRepository
+from src.middlewares.authorization import AuthorizationMiddleware
+from src.swagger_handler import handle_swagger_request
+from src.exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
 
 
 class Router:
     """
-    Routes HTTP requests to appropriate controllers
+    Routes HTTP requests to appropriate controllers with authorization
     """
     
     def __init__(self, service: ParameterService):
-        self.controller = ParameterController(service)
+        self.parameter_controller = ParameterController(service)
+        
+        # Initialize user-related components
+        user_repository = UserRepository()
+        user_service = UserService(user_repository)
+        self.user_controller = UserController(user_service)
+        self.auth_middleware = AuthorizationMiddleware(user_repository)
     
     def route(self, method: str, path: str, event: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Route request to appropriate controller method
+        Route request to appropriate controller method with authorization
         
         Args:
             method: HTTP method
@@ -30,19 +42,62 @@ class Router:
         Returns:
             API Gateway response
         """
-        if path == '/parameters' or path == '/parameters/':
-            if method == 'GET':
-                return self.controller.list_parameters(event)
-            elif method == 'POST':
-                return self.controller.create_parameter(event)
-        
-        if path.startswith('/parameters/'):
-            parameter_name = path.replace('/parameters/', '')
-            if parameter_name and method == 'PUT':
-                return self.controller.update_parameter(event, parameter_name)
-        
-        return {
-            'statusCode': 404,
-            'headers': {'Content-Type': 'application/json'},
-            'body': json.dumps({'error': 'Not found'})
-        }
+        try:
+            # Swagger UI routes (sem autenticação)
+            if method == 'GET' and path in ['/', '', '/docs', '/health']:
+                swagger_response = handle_swagger_request(path if path else '/')
+                if swagger_response:
+                    return swagger_response
+            
+            # Get user ID from headers
+            user_id = self.auth_middleware.get_user_from_event(event)
+            
+            # Routes for users (admin only)
+            if path == '/users' or path == '/users/':
+                if method == 'GET':
+                    self.auth_middleware.validate_permission(user_id, 'leitura')
+                    return self.user_controller.list_users(event)
+                elif method == 'POST':
+                    self.auth_middleware.validate_permission(user_id, 'admin')
+                    return self.user_controller.create_user(event)
+            
+            if path.startswith('/users/'):
+                target_user_id = path.replace('/users/', '')
+                if target_user_id:
+                    if method == 'GET':
+                        self.auth_middleware.validate_permission(user_id, 'leitura')
+                        return self.user_controller.get_user(event, target_user_id)
+                    elif method == 'PUT':
+                        self.auth_middleware.validate_permission(user_id, 'admin')
+                        return self.user_controller.update_user(event, target_user_id)
+                    elif method == 'DELETE':
+                        self.auth_middleware.validate_permission(user_id, 'admin')
+                        return self.user_controller.delete_user(event, target_user_id)
+            
+            # Routes for parameters
+            if path == '/parameters' or path == '/parameters/':
+                if method == 'GET':
+                    self.auth_middleware.validate_permission(user_id, 'leitura')
+                    return self.parameter_controller.list_parameters(event)
+                elif method == 'POST':
+                    self.auth_middleware.validate_permission(user_id, 'escrita')
+                    return self.parameter_controller.create_parameter(event)
+            
+            if path.startswith('/parameters/'):
+                parameter_id = path.replace('/parameters/', '')
+                if parameter_id and method == 'PUT':
+                    self.auth_middleware.validate_permission(user_id, 'escrita')
+                    return self.parameter_controller.update_parameter(event, parameter_id)
+            
+            return {
+                'statusCode': 404,
+                'headers': {'Content-Type': 'application/json'},
+                'body': json.dumps({'error': 'Not found'})
+            }
+            
+        except ValidationError as e:
+            return {
+                'statusCode': 403,
+                'headers': {'Content-Type': 'application/json'},
+                'body': json.dumps({'error': str(e)})
+            }

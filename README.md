@@ -1,273 +1,331 @@
 # Feature Flag Manager API
 
-AWS Lambda-based REST API for managing feature flags stored in AWS Systems Manager Parameter Store.
+Sistema de gerenciamento de feature flags com suporte a usuários e permissões, rodando completamente local com LocalStack.
 
-## ⚠️ Estrutura de Parâmetros Atualizada
+## 🚀 Início Rápido - Ambiente Local
 
-**IMPORTANTE**: Este projeto utiliza uma estrutura JSON padronizada para todos os parâmetros feature flags. Cada parâmetro armazena um objeto JSON com metadados completos incluindo descrição, domínio, timestamp, usuário, status enabled e tipo de valor.
+Este é um projeto de **prova de conceito** focado em desenvolvimento local usando Docker e LocalStack.
 
-📖 **Leia a documentação completa**: [PARAMETER_STRUCTURE.md](docs/PARAMETER_STRUCTURE.md)
+```bash
+# 1. Buildar as imagens
+./build.sh
+
+# 2. Subir o ambiente (LocalStack + Lambda + Parameter Store)
+./up.sh
+
+# 3. Testar a API
+./test-api.sh
+```
+
+📖 **Documentação completa de desenvolvimento local**: [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md)
+
+### Pré-requisitos
+
+- Docker e Docker Compose
+- Git Bash (Windows) ou Bash (Linux/Mac)
+- Python 3.11+ (opcional, para testes)
+
+## ⚠️ Estrutura de Parâmetros
+
+Este projeto utiliza uma estrutura JSON padronizada para todos os parâmetros feature flags:
+
+📖 **Documentação completa**: [PARAMETER_STRUCTURE.md](docs/PARAMETER_STRUCTURE.md)
 
 ### Principais Características:
-- ✅ **Metadados Completos**: Descrição, domínio, timestamp, usuário
-- ✅ **Tipos Suportados**: boolean, string, integer, double, date, time, datetime, json
-- ✅ **Flag Enabled**: Controle se a flag está ativa
+- ✅ **Metadados Completos**: ID, tipo, descrição, timestamp, usuário
+- ✅ **Tipos Suportados**: BOOLEAN, STRING, INTEGER, DOUBLE, DATE, TIME, DATETIME, JSON
+- ✅ **Histórico de Versão**: Rastreamento automático da versão anterior
 - ✅ **Auditoria**: Rastreamento de modificações por usuário e timestamp
-- ✅ **Retrocompatibilidade**: Suporta parâmetros antigos
+- 🔐 **Sistema de Permissões**: Controle de acesso baseado em roles (leitura, escrita, admin)
+- 🏷️ **Prefixos Customizados**: Organize flags por domínio/módulo
 
-## Architecture
+### Estrutura de Armazenamento
 
-This project follows **SOLID principles** and clean architecture patterns:
+- **Feature Flags**: `/feature-flags/flags/{prefix}/{id}`
+- **Usuários**: `/feature-flags/users`
 
-- **Single Responsibility Principle (SRP)**: Each class has one well-defined responsibility
-- **Open/Closed Principle**: Code is open for extension but closed for modification
-- **Liskov Substitution Principle**: Repository interfaces can be substituted with implementations
-- **Interface Segregation Principle**: Small, focused interfaces
-- **Dependency Inversion Principle**: High-level modules depend on abstractions, not implementations
+📖 **Sistema de Usuários e Permissões**: [USERS_AND_PERMISSIONS.md](docs/USERS_AND_PERMISSIONS.md)
+
+## Arquitetura
+
+Este projeto segue os **princípios SOLID** e padrões de clean architecture:
+
+- **Single Responsibility Principle (SRP)**: Cada classe tem uma responsabilidade bem definida
+- **Open/Closed Principle**: Código aberto para extensão, fechado para modificação
+- **Liskov Substitution Principle**: Interfaces de repositório podem ser substituídas
+- **Interface Segregation Principle**: Interfaces pequenas e focadas
+- **Dependency Inversion Principle**: Módulos de alto nível dependem de abstrações
 
 📂 **Ver estrutura completa**: [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)
 
-### Project Structure
+### Estrutura do Projeto
 
 ```
 ├── lambda_function.py           # AWS Lambda entry point
+├── docker-compose.yml           # Orquestração LocalStack
+├── Dockerfile                   # Imagem da Lambda
+├── Makefile                     # Comandos de automação
+├── init-localstack.sh          # Script de inicialização
 ├── src/
-│   ├── handler.py              # API Gateway event handler
-│   ├── router.py               # Request routing
-│   ├── exceptions.py           # Custom exceptions
-│   ├── controllers/
-│   │   └── parameter_controller.py  # HTTP request/response handling
-│   ├── services/
-│   │   └── parameter_service.py     # Business logic
-│   ├── repositories/
-│   │   └── parameter_repository.py  # AWS Parameter Store operations
-│   └── validators/
-│       └── parameter_validator.py   # Input validation
-├── tests/
-│   ├── events/                 # Test event files
+│   ├── handler.py              # API handler
+│   ├── router.py               # Roteamento com autorização
+│   ├── exceptions.py           # Exceções customizadas
+│   ├── controllers/            # Camada HTTP
+│   │   ├── parameter_controller.py
+│   │   └── user_controller.py
+│   ├── services/               # Lógica de negócio
+│   │   ├── parameter_service.py
+│   │   └── user_service.py
+│   ├── repositories/           # Acesso a dados
+│   │   ├── parameter_repository.py
+│   │   └── user_repository.py
+│   ├── validators/             # Validação de entrada
+│   │   └── parameter_validator.py
+│   └── middlewares/            # Middlewares
+│       └── authorization.py
+├── tests/                      # Testes
+│   ├── events/                 # Eventos de teste
 │   └── *.py                    # Unit tests
-├── docs/                       # Documentation files
-│   ├── PARAMETER_STRUCTURE.md  # Parameter structure specification
-│   ├── EXAMPLES.md             # Usage examples
-│   ├── ARCHITECTURE_DIAGRAM.md # Architecture diagrams
-│   └── QUICKSTART_v2.md        # Quick start guide
-├── infra/                      # Infrastructure and deployment
-│   ├── openapi.yaml            # OpenAPI 3.0 specification
-│   ├── deploy.sh               # Deployment script
-│   └── Makefile                # Build automation
-├── requirements.txt            # Python dependencies
-└── README.md                   # This file
+├── docs/                       # Documentação
+│   ├── PARAMETER_STRUCTURE.md
+│   ├── USERS_AND_PERMISSIONS.md
+│   ├── EXAMPLES.md
+│   └── ARCHITECTURE_DIAGRAM.md
+└── requirements.txt            # Dependências Python
 ```
 
-## Features
+## 👥 Usuários Pré-configurados (Ambiente Local)
 
-### 1. List Parameters
+| Email                | Permissões | Descrição                  |
+| -------------------- | ---------- | -------------------------- |
+| `admin@local.dev`    | Admin      | Gerenciar usuários e flags |
+| `dev@local.dev`      | Escrita    | Criar e alterar flags      |
+| `analista@local.dev` | Leitura    | Apenas visualizar          |
+
+## Funcionalidades
+
+### 🔐 Sistema de Permissões
+
+A API inclui um sistema completo de gerenciamento de usuários com controle de acesso baseado em roles:
+
+- **leitura**: Visualizar parâmetros e usuários
+- **escrita**: Criar e atualizar parâmetros  
+- **admin**: Acesso completo incluindo gerenciamento de usuários
+
+Todas as requisições devem incluir o header `X-User-Id` para autenticação.
+
+📖 **Documentação completa**: [USERS_AND_PERMISSIONS.md](docs/USERS_AND_PERMISSIONS.md)
+
+### 1. Listar Parâmetros
 **Endpoint**: `GET /parameters`
+**Permissão**: `leitura`
 
-Lists all feature flags with `/feature-flags` prefix from Parameter Store.
+Lista todos os feature flags com o prefixo `/feature-flags/flags`.
+
+**Exemplo**:
+```bash
+curl -X GET "http://localhost:4566/2021-10-31/functions/feature-flag-manager/invocations/parameters" \
+  -H "X-User-Id: dev@local.dev"
+```
 
 **Response**:
 ```json
 {
   "parameters": [
     {
-      "name": "my-feature",
-      "full_name": "/feature-flags/my-feature",
-      "description": "Controls my feature",
-      "domain": "user-interface",
-      "last_modified": "2025-12-25T20:00:00.000000",
-      "modified_by": "admin@example.com",
-      "enabled": true,
-      "value_type": "boolean",
-      "value": true
+      "id": "DARK_MODE",
+      "value": "true",
+      "type": "BOOLEAN",
+      "description": "Habilita modo escuro",
+      "lastModifiedAt": "2026-01-14T10:00:00Z",
+      "lastModifiedBy": "admin@local.dev"
     }
   ]
 }
 ```
 
-### 2. Create Parameter
+### 2. Criar Parâmetro
 **Endpoint**: `POST /parameters`
+**Permissão**: `escrita`
 
-Creates a new feature flag parameter with complete metadata structure.
+Cria um novo feature flag com estrutura completa de metadados.
 
-**Request Body**:
-```json
-{
-  "name": "my-feature",
-  "value": true,
-  "value_type": "boolean",
-  "description": "Controls my feature",
-  "domain": "user-interface",
-  "enabled": true,
-  "modified_by": "admin@example.com",
-  "type": "String"
-}
+**Exemplo**:
+```bash
+curl -X POST "http://localhost:4566/2021-10-31/functions/feature-flag-manager/invocations/parameters" \
+  -H "X-User-Id: dev@local.dev" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "MY_FEATURE",
+    "value": "true",
+    "type": "BOOLEAN",
+    "description": "Controla minha feature",
+    "lastModifiedBy": "dev@local.dev",
+    "prefix": "ui"
+  }'
 ```
 
-**Supported value_types**: `boolean`, `string`, `integer`, `double`, `date`, `time`, `datetime`, `json`
+**Nota**: O campo `prefix` é opcional. Se fornecido, o parâmetro será criado em `/feature-flags/flags/{prefix}/{id}`, caso contrário em `/feature-flags/flags/{id}`.
+
+**Tipos suportados**: `BOOLEAN`, `STRING`, `INTEGER`, `DOUBLE`, `DATE`, `TIME`, `DATETIME`, `JSON`
 
 **Response** (201 Created):
 ```json
 {
   "message": "Parameter created successfully",
-  "name": "/feature-flags/my-feature",
+  "id": "MY_FEATURE",
   "parameter": {
-    "name": "my-feature",
-    "value": true,
-    "description": "Controls my feature",
-    "domain": "user-interface",
-    "enabled": true,
-    "value_type": "boolean",
-    "modified_by": "admin@example.com"
+    "id": "MY_FEATURE",
+    "value": "true",
+    "type": "BOOLEAN",
+    "description": "Controla minha feature",
+    "lastModifiedAt": "2026-01-14T10:00:00Z",
+    "lastModifiedBy": "dev@local.dev"
   }
 }
 ```
 
-### 3. Update Parameter
-**Endpoint**: `PUT /parameters/{parameterName}`
+### 3. Atualizar Parâmetro
+**Endpoint**: `PUT /parameters/{parameterId}`
+**Permissão**: `escrita`
 
-Updates an existing feature flag parameter. All fields are optional.
+Atualiza um feature flag existente. Todos os campos são opcionais.
 
-**Request Body**:
-```json
-{
-  "value": false,
-  "description": "Updated description",
-  "enabled": false,
-  "modified_by": "admin@example.com"
-}
+**Exemplo**:
+```bash
+curl -X PUT "http://localhost:4566/2021-10-31/functions/feature-flag-manager/invocations/parameters/MY_FEATURE" \
+  -H "X-User-Id: dev@local.dev" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "value": "false",
+    "description": "Descrição atualizada",
+    "lastModifiedBy": "dev@local.dev",
+    "prefix": "ui"
+  }'
 ```
+
+**Nota**: Se o parâmetro foi criado com um prefixo, você deve fornecer o mesmo prefixo ao atualizar.
 
 **Response** (200 OK):
 ```json
 {
   "message": "Parameter updated successfully",
-  "name": "/feature-flags/my-feature"
+  "id": "MY_FEATURE"
 }
 ```
 
-## Deployment
+### 4. Deletar Parâmetro
+**Endpoint**: `DELETE /parameters/{parameterId}`
+**Permissão**: `escrita`
 
-### Prerequisites
-- AWS Account
-- IAM role with SSM permissions:
-  - `ssm:GetParameter`
-  - `ssm:PutParameter`
-  - `ssm:DescribeParameters`
-
-### Deploy to AWS Lambda
-
-1. Install dependencies:
+**Exemplo**:
 ```bash
-pip install -r requirements.txt -t .
+curl -X DELETE "http://localhost:4566/2021-10-31/functions/feature-flag-manager/invocations/parameters/MY_FEATURE" \
+  -H "X-User-Id: dev@local.dev"
 ```
 
-2. Create deployment package:
+### 5. Gerenciamento de Usuários
+
+#### Listar Usuários
+**Endpoint**: `GET /users`
+**Permissão**: `leitura`
+
+**Exemplo**:
 ```bash
-zip -r function.zip . -x "*.git*" "*.pyc" "__pycache__/*"
+curl -X GET "http://localhost:4566/2021-10-31/functions/feature-flag-manager/invocations/users" \
+  -H "X-User-Id: admin@local.dev"
 ```
 
-3. Deploy via AWS CLI:
+#### Criar Usuário
+**Endpoint**: `POST /users`
+**Permissão**: `admin`
+
+**Exemplo**:
 ```bash
-aws lambda create-function \
-  --function-name feature-flag-manager \
-  --runtime python3.11 \
-  --role arn:aws:iam::YOUR-ACCOUNT:role/lambda-ssm-role \
-  --handler lambda_function.lambda_handler \
-  --zip-file fileb://function.zip
+curl -X POST "http://localhost:4566/2021-10-31/functions/feature-flag-manager/invocations/users" \
+  -H "X-User-Id: admin@local.dev" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "usuario@exemplo.com",
+    "nome": "Nome do Usuário",
+    "permissoes": {
+      "leitura": true,
+      "escrita": true,
+      "admin": false
+    },
+    "ativo": true
+  }'
 ```
 
-4. Configure API Gateway to trigger the Lambda function
+#### Atualizar Usuário
+**Endpoint**: `PUT /users/{userId}`
+**Permissão**: `admin`
 
-### IAM Policy Example
+#### Deletar Usuário
+**Endpoint**: `DELETE /users/{userId}`
+**Permissão**: `admin`
 
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "ssm:GetParameter",
-        "ssm:PutParameter",
-        "ssm:DescribeParameters"
-      ],
-      "Resource": "arn:aws:ssm:*:*:parameter/feature-flags/*"
-    }
-  ]
-}
+📖 **Documentação completa da API de usuários**: [USERS_AND_PERMISSIONS.md](docs/USERS_AND_PERMISSIONS.md)
+
+## 📚 Documentação Completa
+
+- **[LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md)** - Guia completo do ambiente local
+- **[PARAMETER_STRUCTURE.md](docs/PARAMETER_STRUCTURE.md)** - Estrutura JSON dos parâmetros
+- **[USERS_AND_PERMISSIONS.md](docs/USERS_AND_PERMISSIONS.md)** - Sistema de usuários e permissões
+- **[EXAMPLES.md](docs/EXAMPLES.md)** - Exemplos práticos de uso
+- **[ARCHITECTURE_DIAGRAM.md](docs/ARCHITECTURE_DIAGRAM.md)** - Diagramas de arquitetura
+
+## 🧪 Testes
+
+Eventos de teste disponíveis em [`tests/events/`](tests/events/) para testes locais.
+
+Para executar testes rápidos no ambiente local:
+
+```bash
+make test-api
 ```
 
-## Local Development
+## 🔍 Comandos Úteis
 
-### Testing Locally
+```bash
+# Ver logs em tempo real
+make logs
+make logs-lambda
 
-Create a test event file `test_event.json`:
-```json
-{
-  "httpMethod": "GET",
-  "path": "/parameters",
-  "body": null
-}
+# Reiniciar ambiente
+make restart
+
+# Limpar tudo (dados, containers, volumes)
+make clean
+
+# Informações do ambiente
+make info
 ```
 
-Run locally:
-```python
-from lambda_function import lambda_handler
-import json
+## ⚡ Boas Práticas Implementadas
 
-with open('test_event.json') as f:
-    event = json.load(f)
+1. **Separation of Concerns**: Controllers, services, repositories claramente separados
+2. **Dependency Injection**: Dependências injetadas via construtores
+3. **Error Handling**: Exceções customizadas com propagação adequada
+4. **Logging**: Logging estruturado em toda aplicação
+5. **Validation**: Validação de entrada antes do processamento
+6. **Type Hints**: Anotações de tipo completas
+7. **Documentation**: Docstrings abrangentes
 
-response = lambda_handler(event, None)
-print(json.dumps(response, indent=2))
-```
+## 📄 Licença
 
-## Error Handling
+Veja o arquivo [LICENSE](LICENSE) para detalhes.
 
-The API implements comprehensive error handling:
+## 🚧 Roadmap (Produção)
 
-- **400 Bad Request**: Validation errors
-- **404 Not Found**: Parameter not found or invalid endpoint
-- **500 Internal Server Error**: AWS service errors
+Este é um projeto de **prova de conceito**. Para ir para produção, será necessário:
 
-All errors return JSON:
-```json
-{
-  "error": "Error message description"
-}
-```
-
-## Best Practices Implemented
-
-1. **Separation of Concerns**: Controllers, services, repositories are clearly separated
-2. **Dependency Injection**: Dependencies injected via constructors
-3. **Error Handling**: Custom exceptions with proper error propagation
-4. **Logging**: Structured logging throughout the application
-5. **Validation**: Input validation before processing
-6. **Type Hints**: Full type annotations for better IDE support
-7. **Documentation**: Comprehensive docstrings following Google style
-
-## OpenAPI Specification
-
-The API is fully documented using OpenAPI 3.0 standard. See [infra/openapi.yaml](infra/openapi.yaml) for the complete specification. This enables:
-- Automatic API documentation generation
-- Client SDK generation
-- API testing tools integration
-- LLM agent integration
-
-## Documentation
-
-📚 **Complete Documentation**:
-- [Parameter Structure](docs/PARAMETER_STRUCTURE.md) - Detailed specification of the JSON structure
-- [Examples](docs/EXAMPLES.md) - Practical examples and code samples
-- [Architecture Diagrams](docs/ARCHITECTURE_DIAGRAM.md) - Visual architecture documentation
-- [Quick Start Guide](docs/QUICKSTART_v2.md) - Get started quickly
-
-## Test Events
-
-Sample test events are available in [`tests/events/`](tests/events/) directory for local testing.
-
-## License
-
-See LICENSE file for details.
+- [ ] Implementar testes unitários e de integração completos
+- [ ] Configurar CI/CD pipeline
+- [ ] Criar infraestrutura como código (Terraform/CloudFormation)
+- [ ] Implementar API Gateway com autenticação real (Cognito/OAuth)
+- [ ] Adicionar métricas e observabilidade (CloudWatch, X-Ray)
+- [ ] Implementar rate limiting e throttling
+- [ ] Documentar processo de deploy para produção
+- [ ] Implementar backup e disaster recovery
+- [ ] Adicionar conformidade e auditoria

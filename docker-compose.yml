@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  localstack:
+    image: localstack/localstack:latest
+    container_name: feature-flag-localstack
+    ports:
+      - "4566:4566"            # LocalStack Gateway
+      - "4510-4559:4510-4559"  # External services port range
+    environment:
+      - SERVICES=lambda,ssm,logs,iam
+      - DEBUG=1
+      - LAMBDA_EXECUTOR=docker
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - AWS_DEFAULT_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - LAMBDA_DOCKER_NETWORK=lambda-feature-flag-manager_lambda-network
+    volumes:
+      - "./localstack-data:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./init-localstack.sh:/etc/localstack/init/ready.d/init-localstack.sh"
+      - "./src:/docker-entrypoint-initaws.d/src:ro"
+      - "./lambda_function.py:/docker-entrypoint-initaws.d/lambda_function.py:ro"
+      - "./openapi.yaml:/docker-entrypoint-initaws.d/openapi.yaml:ro"
+    networks:
+      - lambda-network
+
+  lambda-function:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: feature-flag-manager:latest
+    container_name: feature-flag-lambda-build
+    command: "echo 'Lambda image built successfully'"
+    networks:
+      - lambda-network
+
+networks:
+  lambda-network:
+    driver: bridge
+
+volumes:
+  localstack-data:

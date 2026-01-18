@@ -30,77 +30,69 @@ class ParameterService:
     
     def create_parameter(
         self,
-        name: str,
-        value: Any,
+        param_id: str,
+        value: str,
+        param_type: str = 'STRING',
         description: str = '',
-        domain: str = '',
-        enabled: bool = True,
-        value_type: str = 'string',
-        modified_by: str = '',
-        parameter_type: str = 'String'
+        last_modified_by: str = '',
+        parameter_store_type: str = 'String',
+        custom_prefix: str = ''
     ) -> None:
         """
         Create a new feature flag parameter with complete metadata
         
         Args:
-            name: Parameter name (will be prefixed with /feature-flags/)
-            value: Parameter value (any type based on value_type)
+            param_id: Parameter identifier
+            value: Parameter value (as string)
+            param_type: Type of the value (BOOLEAN, STRING, INTEGER, DOUBLE, DATE, TIME, DATETIME, JSON)
             description: Parameter description
-            domain: Parameter domain
-            enabled: Whether the flag is enabled
-            value_type: Type of the value (boolean, string, integer, double, date, time, datetime, json)
-            modified_by: User who created the parameter
-            parameter_type: AWS Parameter type (String, StringList, SecureString)
+            last_modified_by: User who created the parameter
+            parameter_store_type: AWS Parameter type (String, StringList, SecureString)
+            custom_prefix: Optional custom prefix within flags
         """
-        full_name = f'/feature-flags/{name}'
-        logger.info(f"Creating parameter: {full_name}")
+        logger.info(f"Creating parameter: {param_id}")
         
         self.repository.create_parameter(
-            name=full_name,
+            param_id=param_id,
             value=value,
+            param_type=param_type,
             description=description,
-            domain=domain,
-            enabled=enabled,
-            value_type=value_type,
-            modified_by=modified_by,
-            parameter_type=parameter_type
+            last_modified_by=last_modified_by,
+            parameter_store_type=parameter_store_type,
+            custom_prefix=custom_prefix
         )
     
     def update_parameter(
         self,
-        name: str,
-        value: Optional[Any] = None,
+        param_id: str,
+        value: Optional[str] = None,
         description: Optional[str] = None,
-        domain: Optional[str] = None,
-        enabled: Optional[bool] = None,
-        value_type: Optional[str] = None,
-        modified_by: Optional[str] = None
+        param_type: Optional[str] = None,
+        last_modified_by: Optional[str] = None,
+        custom_prefix: str = ''
     ) -> None:
         """
         Update an existing feature flag parameter
         
         Args:
-            name: Parameter name (without /feature-flags/ prefix)
-            value: New parameter value (optional)
+            param_id: Parameter identifier
+            value: New parameter value (optional, as string)
             description: New parameter description (optional)
-            domain: New parameter domain (optional)
-            enabled: New enabled status (optional)
-            value_type: New value type (optional)
-            modified_by: User who modified the parameter
+            param_type: New parameter type (optional)
+            last_modified_by: User who modified the parameter
+            custom_prefix: Optional custom prefix within flags
         """
-        full_name = f'/feature-flags/{name}'
-        logger.info(f"Updating parameter: {full_name}")
+        logger.info(f"Updating parameter: {param_id}")
         
-        if all(v is None for v in [value, description, domain, enabled, value_type, modified_by]):
+        if all(v is None for v in [value, description, param_type, last_modified_by]):
             logger.warning("No updates provided")
             return
         
         self.repository.update_parameter(
-            name=full_name,
+            param_id=param_id,
             value=value,
             description=description,
-            domain=domain,
-            enabled=enabled,
-            value_type=value_type,
-            modified_by=modified_by
+            param_type=param_type,
+            last_modified_by=last_modified_by,
+            custom_prefix=custom_prefix
         )
