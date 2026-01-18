@@ -64,7 +64,6 @@ class ParameterRepository:
                                 'description': param_data.get('description', ''),
                                 'lastModifiedAt': param_data.get('lastModifiedAt', param['LastModifiedDate'].isoformat()),
                                 'lastModifiedBy': param_data.get('lastModifiedBy', ''),
-                                'path': param['Name'],
                                 'arn': param.get('ARN', f"arn:aws:ssm:us-east-1:000000000000:parameter{param['Name']}")
                             }
                             # Include previousVersion if present
@@ -79,7 +78,6 @@ class ParameterRepository:
                                 'description': param.get('Description', ''),
                                 'lastModifiedAt': param['LastModifiedDate'].isoformat(),
                                 'lastModifiedBy': '',
-                                'path': param['Name'],
                                 'arn': param.get('ARN', f"arn:aws:ssm:us-east-1:000000000000:parameter{param['Name']}")
                             }
                     except ClientError as e:
@@ -91,7 +89,6 @@ class ParameterRepository:
                             'description': param.get('Description', ''),
                             'lastModifiedAt': param['LastModifiedDate'].isoformat(),
                             'lastModifiedBy': '',
-                            'path': param['Name'],
                             'arn': param.get('ARN', f"arn:aws:ssm:us-east-1:000000000000:parameter{param['Name']}")
                         }
                     
@@ -141,7 +138,6 @@ class ParameterRepository:
                                 'description': param_data.get('description', ''),
                                 'lastModifiedAt': param_data.get('lastModifiedAt', param['LastModifiedDate'].isoformat()),
                                 'lastModifiedBy': param_data.get('lastModifiedBy', ''),
-                                'path': param['Name'],
                                 'arn': param.get('ARN', f"arn:aws:ssm:us-east-1:000000000000:parameter{param['Name']}"),
                                 'prefix': custom_prefix
                             }
@@ -157,7 +153,6 @@ class ParameterRepository:
                                 'description': param.get('Description', ''),
                                 'lastModifiedAt': param['LastModifiedDate'].isoformat(),
                                 'lastModifiedBy': '',
-                                'path': param['Name'],
                                 'arn': param.get('ARN', f"arn:aws:ssm:us-east-1:000000000000:parameter{param['Name']}"),
                                 'prefix': custom_prefix
                             }
@@ -170,7 +165,6 @@ class ParameterRepository:
                             'description': param.get('Description', ''),
                             'lastModifiedAt': param['LastModifiedDate'].isoformat(),
                             'lastModifiedBy': '',
-                            'path': param['Name'],
                             'arn': param.get('ARN', f"arn:aws:ssm:us-east-1:000000000000:parameter{param['Name']}"),
                             'prefix': custom_prefix
                         }
@@ -278,7 +272,6 @@ class ParameterRepository:
         param_id: str,
         value: Optional[str] = None,
         description: Optional[str] = None,
-        param_type: Optional[str] = None,
         last_modified_by: Optional[str] = None,
         custom_prefix: str = ''
     ) -> None:
@@ -289,8 +282,6 @@ class ParameterRepository:
             param_id: Parameter identifier
             value: New parameter value (optional, as string)
             description: New parameter description (optional)
-            param_type: New parameter type (optional)
-            last_modified_by: User who modified the parameter
             custom_prefix: Optional custom prefix within flags
         """
         try:
@@ -299,9 +290,18 @@ class ParameterRepository:
                 full_name = f'{self.prefix}/{custom_prefix}/{param_id}'
             else:
                 full_name = f'{self.prefix}/{param_id}'
-            
-            # Get current parameter
-            current_param = self.ssm_client.get_parameter(Name=full_name, WithDecryption=True)
+
+            # Get current parameter (fallback: resolve by id across prefixes)
+            try:
+                current_param = self.ssm_client.get_parameter(Name=full_name, WithDecryption=True)
+            except ClientError as e:
+                error_code = e.response.get('Error', {}).get('Code', '')
+                if error_code == 'ParameterNotFound' and not custom_prefix:
+                    resolved_name = self._resolve_parameter_path_by_id(param_id)
+                    current_param = self.ssm_client.get_parameter(Name=resolved_name, WithDecryption=True)
+                    full_name = resolved_name
+                else:
+                    raise
             current_value = current_param['Parameter']['Value']
             
             # Try to parse existing JSON structure
@@ -312,7 +312,7 @@ class ParameterRepository:
                 param_data = {
                     'id': param_id,
                     'value': value if value is not None else current_value,
-                    'type': param_type or 'STRING',
+                    'type': 'STRING',
                     'description': description or '',
                     'lastModifiedAt': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
                     'lastModifiedBy': last_modified_by or ''
@@ -331,11 +331,9 @@ class ParameterRepository:
                     param_data['value'] = value
                 if description is not None:
                     param_data['description'] = description
-                if param_type is not None:
-                    param_data['type'] = param_type
-                if last_modified_by is not None:
+                if last_modified_by:
                     param_data['lastModifiedBy'] = last_modified_by
-                
+
                 param_data['lastModifiedAt'] = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
             
             json_value = json.dumps(param_data)
@@ -355,3 +353,68 @@ class ParameterRepository:
                 raise ParameterNotFoundError(f"Parameter {param_id} not found")
             logger.error(f"Error updating parameter: {str(e)}")
             raise ParameterStoreError(f"Failed to update parameter: {str(e)}")
+
+    def _resolve_parameter_path_by_id(self, param_id: str) -> str:
+        """
+        Resolve parameter full path by ID searching all prefixes.
+
+        Args:
+            param_id: Parameter identifier
+
+        Returns:
+            Full parameter name in SSM
+        """
+        paginator = self.ssm_client.get_paginator('get_parameters_by_path')
+        page_iterator = paginator.paginate(
+            Path=self.prefix,
+            Recursive=True,
+            WithDecryption=False
+        )
+
+        for page in page_iterator:
+            for param in page.get('Parameters', []):
+                name = param.get('Name', '')
+                if name.endswith(f'/{param_id}'):
+                    return name
+
+        raise ParameterNotFoundError(f"Parameter {param_id} not found")
+
+    def delete_parameter(self, param_id: str, custom_prefix: str = '') -> None:
+        """
+        Delete a parameter from Parameter Store
+
+        Args:
+            param_id: Parameter identifier
+            custom_prefix: Optional custom prefix within flags
+        """
+        try:
+            if custom_prefix:
+                full_name = f'{self.prefix}/{custom_prefix}/{param_id}'
+            else:
+                full_name = f'{self.prefix}/{param_id}'
+
+            self.ssm_client.delete_parameter(Name=full_name)
+            logger.info(f"Deleted parameter: {full_name}")
+        except ClientError as e:
+            error_code = e.response.get('Error', {}).get('Code', '')
+            if error_code == 'ParameterNotFound':
+                raise ParameterNotFoundError(f"Parameter {param_id} not found")
+            logger.error(f"Error deleting parameter: {str(e)}")
+            raise ParameterStoreError(f"Failed to delete parameter: {str(e)}")
+
+    def delete_parameter_by_path(self, full_name: str) -> None:
+        """
+        Delete a parameter by full path (e.g., /feature-flags/flags/{prefix}/{id})
+
+        Args:
+            full_name: Full parameter path in SSM
+        """
+        try:
+            self.ssm_client.delete_parameter(Name=full_name)
+            logger.info(f"Deleted parameter: {full_name}")
+        except ClientError as e:
+            error_code = e.response.get('Error', {}).get('Code', '')
+            if error_code == 'ParameterNotFound':
+                raise ParameterNotFoundError(f"Parameter {full_name} not found")
+            logger.error(f"Error deleting parameter: {str(e)}")
+            raise ParameterStoreError(f"Failed to delete parameter: {str(e)}")

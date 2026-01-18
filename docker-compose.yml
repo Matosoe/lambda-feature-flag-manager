@@ -18,6 +18,7 @@ services:
       - "./localstack-data:/var/lib/localstack"
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "./init-localstack.sh:/etc/localstack/init/ready.d/init-localstack.sh"
+      - "./init-seed.sh:/docker-entrypoint-initaws.d/init-seed.sh"
       - "./src:/docker-entrypoint-initaws.d/src:ro"
       - "./lambda_function.py:/docker-entrypoint-initaws.d/lambda_function.py:ro"
       - "./openapi.yaml:/docker-entrypoint-initaws.d/openapi.yaml:ro"

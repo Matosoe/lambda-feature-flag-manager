@@ -57,6 +57,8 @@ class LambdaProxyHandler(BaseHTTPRequestHandler):
             for header_name, header_value in headers.items():
                 self.send_header(header_name, header_value)
             self.end_headers()
+
+            print(f"[PROXY] GET {path} -> {status_code}")
             
             # Escrever body
             if isinstance(body, str):
@@ -66,8 +68,10 @@ class LambdaProxyHandler(BaseHTTPRequestHandler):
                 
         except subprocess.TimeoutExpired:
             self.send_error(504, "Lambda invocation timeout")
+            print(f"[PROXY] GET {path} -> 504 (timeout)")
         except Exception as e:
             self.send_error(500, f"Error: {str(e)}")
+            print(f"[PROXY] GET {path} -> 500 ({str(e)})")
     
     def do_POST(self):
         """Handle POST requests"""
@@ -119,15 +123,75 @@ class LambdaProxyHandler(BaseHTTPRequestHandler):
                 self.wfile.write(body_response.encode('utf-8'))
             else:
                 self.wfile.write(json.dumps(body_response).encode('utf-8'))
+
+            print(f"[PROXY] POST {path} -> {status_code}")
                 
         except subprocess.TimeoutExpired:
             self.send_error(504, "Lambda invocation timeout")
+            print(f"[PROXY] POST {path} -> 504 (timeout)")
         except Exception as e:
             self.send_error(500, f"Error: {str(e)}")
+            print(f"[PROXY] POST {path} -> 500 ({str(e)})")
     
     def do_PUT(self):
         """Handle PUT requests"""
-        self.do_POST()  # Usar mesma lógica do POST
+        content_length = int(self.headers.get('Content-Length', 0))
+        body = self.rfile.read(content_length).decode('utf-8') if content_length > 0 else ""
+
+        parsed_path = urlparse(self.path)
+        path = parsed_path.path
+
+        # Criar payload Lambda
+        lambda_payload = {
+            "httpMethod": "PUT",
+            "path": path,
+            "headers": dict(self.headers),
+            "body": body
+        }
+
+        try:
+            # Invocar Lambda
+            cmd = [
+                "docker", "exec", "feature-flag-localstack",
+                "sh", "-c",
+                f"awslocal lambda invoke "
+                f"--function-name feature-flag-manager "
+                f"--payload '{json.dumps(lambda_payload)}' "
+                f"/tmp/proxy_response.json > /dev/null 2>&1 && cat /tmp/proxy_response.json"
+            ]
+
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+
+            if result.returncode != 0:
+                self.send_error(500, f"Lambda invocation failed: {result.stderr}")
+                return
+
+            # Parse resposta
+            lambda_response = json.loads(result.stdout)
+
+            # Enviar resposta HTTP
+            status_code = lambda_response.get("statusCode", 200)
+            headers = lambda_response.get("headers", {})
+            body_response = lambda_response.get("body", "")
+
+            self.send_response(status_code)
+            for header_name, header_value in headers.items():
+                self.send_header(header_name, header_value)
+            self.end_headers()
+
+            if isinstance(body_response, str):
+                self.wfile.write(body_response.encode('utf-8'))
+            else:
+                self.wfile.write(json.dumps(body_response).encode('utf-8'))
+
+            print(f"[PROXY] PUT {path} -> {status_code}")
+
+        except subprocess.TimeoutExpired:
+            self.send_error(504, "Lambda invocation timeout")
+            print(f"[PROXY] PUT {path} -> 504 (timeout)")
+        except Exception as e:
+            self.send_error(500, f"Error: {str(e)}")
+            print(f"[PROXY] PUT {path} -> 500 ({str(e)})")
     
     def do_DELETE(self):
         """Handle DELETE requests"""
@@ -171,11 +235,15 @@ class LambdaProxyHandler(BaseHTTPRequestHandler):
                 self.wfile.write(body.encode('utf-8'))
             else:
                 self.wfile.write(json.dumps(body).encode('utf-8'))
+
+            print(f"[PROXY] DELETE {path} -> {status_code}")
                 
         except subprocess.TimeoutExpired:
             self.send_error(504, "Lambda invocation timeout")
+            print(f"[PROXY] DELETE {path} -> 504 (timeout)")
         except Exception as e:
             self.send_error(500, f"Error: {str(e)}")
+            print(f"[PROXY] DELETE {path} -> 500 ({str(e)})")
     
     def log_message(self, format, *args):
         """Custom log format"""

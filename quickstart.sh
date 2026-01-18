@@ -39,15 +39,34 @@ echo "   • admin@local.dev     - Admin (todas permissões)"
 echo "   • dev@local.dev       - Desenvolvedor (leitura + escrita)"
 echo "   • analista@local.dev  - Analista (apenas leitura)"
 echo ""
-echo "⏹️  Pressione Ctrl+C para parar o servidor"
+echo "🧾 Logs do Swagger UI: ./logs/swagger-ui.log"
+echo "⏹️  Para parar: finalize o processo (PID exibido abaixo)"
 echo "========================================================"
 echo ""
 
-# Iniciar proxy
+# Iniciar proxy em background
+LOG_DIR="./logs"
+LOG_FILE="$LOG_DIR/swagger-ui.log"
+PID_FILE="$LOG_DIR/swagger-ui.pid"
+mkdir -p "$LOG_DIR"
+
+# Encerrar proxy anterior, se existir
+if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
+    echo "⚠️  Encerrando Swagger UI anterior (PID: $(cat "$PID_FILE"))"
+    kill "$(cat "$PID_FILE")" 2>/dev/null || true
+    rm -f "$PID_FILE"
+fi
+
 if command -v python &> /dev/null; then
-    python swagger-proxy.py
+    PYTHONIOENCODING=UTF-8 nohup python swagger-proxy.py > "$LOG_FILE" 2>&1 &
+    SWAGGER_PID=$!
+    echo "$SWAGGER_PID" > "$PID_FILE"
+    echo "✅ Swagger UI em segundo plano (PID: $SWAGGER_PID)"
 elif command -v python3 &> /dev/null; then
-    python3 swagger-proxy.py
+    PYTHONIOENCODING=UTF-8 nohup python3 swagger-proxy.py > "$LOG_FILE" 2>&1 &
+    SWAGGER_PID=$!
+    echo "$SWAGGER_PID" > "$PID_FILE"
+    echo "✅ Swagger UI em segundo plano (PID: $SWAGGER_PID)"
 else
     echo "❌ Python não encontrado!"
     exit 1

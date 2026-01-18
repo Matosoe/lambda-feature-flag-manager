@@ -28,8 +28,8 @@ class ParameterService:
         logger.info("Listing feature flag parameters")
         parameters = self.repository.get_all_parameters()
         
-        # Sort by path to maintain hierarchical order
-        parameters.sort(key=lambda x: x.get('path', ''))
+        # Sort by ARN to maintain hierarchical order
+        parameters.sort(key=lambda x: x.get('arn', ''))
         
         return parameters
     
@@ -46,8 +46,8 @@ class ParameterService:
         logger.info(f"Listing feature flag parameters with prefix: {prefix}")
         parameters = self.repository.get_parameters_by_prefix(prefix)
         
-        # Sort by path to maintain hierarchical order
-        parameters.sort(key=lambda x: x.get('path', ''))
+        # Sort by ARN to maintain hierarchical order
+        parameters.sort(key=lambda x: x.get('arn', ''))
         
         return parameters
     
@@ -99,7 +99,6 @@ class ParameterService:
         param_id: str,
         value: Optional[str] = None,
         description: Optional[str] = None,
-        param_type: Optional[str] = None,
         last_modified_by: Optional[str] = None,
         custom_prefix: str = ''
     ) -> None:
@@ -110,13 +109,11 @@ class ParameterService:
             param_id: Parameter identifier
             value: New parameter value (optional, as string)
             description: New parameter description (optional)
-            param_type: New parameter type (optional)
-            last_modified_by: User who modified the parameter
             custom_prefix: Optional custom prefix within flags
         """
         logger.info(f"Updating parameter: {param_id}")
         
-        if all(v is None for v in [value, description, param_type, last_modified_by]):
+        if all(v is None for v in [value, description]):
             logger.warning("No updates provided")
             return
         
@@ -124,7 +121,29 @@ class ParameterService:
             param_id=param_id,
             value=value,
             description=description,
-            param_type=param_type,
             last_modified_by=last_modified_by,
             custom_prefix=custom_prefix
         )
+
+    def delete_parameter(self, param_id: str, custom_prefix: str = '') -> None:
+        """
+        Delete an existing feature flag parameter
+
+        Args:
+            param_id: Parameter identifier
+            custom_prefix: Optional custom prefix within flags
+        """
+        logger.info(f"Deleting parameter: {param_id}")
+        self.repository.delete_parameter(param_id=param_id, custom_prefix=custom_prefix)
+
+    def delete_parameter_by_arn(self, arn: str) -> None:
+        """
+        Delete a parameter using its ARN
+
+        Args:
+            arn: Parameter ARN
+        """
+        logger.info(f"Deleting parameter by ARN: {arn}")
+        # Extract full parameter path from ARN
+        full_name = arn.split(':parameter', 1)[-1]
+        self.repository.delete_parameter_by_path(full_name)

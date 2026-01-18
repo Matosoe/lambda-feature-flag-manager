@@ -4,6 +4,7 @@ Router for API endpoints
 import json
 import logging
 from typing import Dict, Any
+from urllib.parse import unquote
 from src.controllers.parameter_controller import ParameterController
 from src.controllers.user_controller import UserController
 from src.services.parameter_service import ParameterService
@@ -64,6 +65,7 @@ class Router:
             if path.startswith('/users/'):
                 target_user_id = path.replace('/users/', '')
                 if target_user_id:
+                    target_user_id = unquote(target_user_id)
                     if method == 'GET':
                         self.auth_middleware.validate_permission(user_id, 'leitura')
                         return self.user_controller.get_user(event, target_user_id)
@@ -96,11 +98,22 @@ class Router:
                     self.auth_middleware.validate_permission(user_id, 'leitura')
                     return self.parameter_controller.list_parameters_by_prefix(event, prefix)
             
+            if path.startswith('/parameters/arn/'):
+                parameter_arn = path.replace('/parameters/arn/', '')
+                if parameter_arn and method == 'DELETE':
+                    self.auth_middleware.validate_permission(user_id, 'admin')
+                    decoded_arn = unquote(parameter_arn)
+                    return self.parameter_controller.delete_parameter(event, decoded_arn)
+
             if path.startswith('/parameters/'):
                 parameter_id = path.replace('/parameters/', '')
                 if parameter_id and method == 'PUT':
                     self.auth_middleware.validate_permission(user_id, 'escrita')
-                    return self.parameter_controller.update_parameter(event, parameter_id)
+                    decoded_id = unquote(parameter_id)
+                    if '/' in decoded_id:
+                        custom_prefix, param_id = decoded_id.split('/', 1)
+                        return self.parameter_controller.update_parameter(event, param_id, custom_prefix)
+                    return self.parameter_controller.update_parameter(event, decoded_id)
             
             return {
                 'statusCode': 404,

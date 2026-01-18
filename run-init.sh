@@ -32,13 +32,6 @@ awslocal lambda create-function \
 
 echo "✓ Lambda criada com sucesso!"
 
-# Criar estrutura inicial de usuários
-echo "Criando usuários pré-configurados..."
-docker exec feature-flag-localstack sh -c '
-awslocal ssm put-parameter \
-    --name "/feature-flags/users" \
-    --value "{\"usuarios\": [{\"id\": \"admin@local.dev\", \"nome\": \"Admin Local\", \"permissoes\": {\"leitura\": true, \"escrita\": true, \"admin\": true}, \"ativo\": true}, {\"id\": \"dev@local.dev\", \"nome\": \"Desenvolvedor\", \"permissoes\": {\"leitura\": true, \"escrita\": true, \"admin\": false}, \"ativo\": true}, {\"id\": \"analista@local.dev\", \"nome\": \"Analista\", \"permissoes\": {\"leitura\": true, \"escrita\": false, \"admin\": false}, \"ativo\": true}]}" \
-    --type String \
-    --overwrite
-'
-echo "✓ Usuários criados com sucesso!"
+# Criar dados iniciais (usuários + parâmetros)
+echo "Criando dados iniciais..."
+docker exec feature-flag-localstack sh -c 'bash /docker-entrypoint-initaws.d/init-seed.sh'

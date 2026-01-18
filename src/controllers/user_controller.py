@@ -80,7 +80,14 @@ class UserController:
             API Gateway response
         """
         try:
-            body = json.loads(event.get('body', '{}'))
+            try:
+                body = json.loads(event.get('body', '{}'))
+            except json.JSONDecodeError as e:
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json'},
+                    'body': json.dumps({'error': f'Invalid JSON body: {str(e)}'})
+                }
             
             # Validate required fields
             if 'id' not in body:
@@ -139,7 +146,17 @@ class UserController:
             API Gateway response
         """
         try:
-            body = json.loads(event.get('body', '{}'))
+            try:
+                body = json.loads(event.get('body', '{}'))
+            except json.JSONDecodeError as e:
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json'},
+                    'body': json.dumps({'error': f'Invalid JSON body: {str(e)}'})
+                }
+
+            if 'id' in body:
+                raise ValidationError("Field 'id' cannot be updated")
             
             nome = body.get('nome')
             permissoes = body.get('permissoes')

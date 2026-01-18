@@ -11,9 +11,6 @@ Este é um projeto de **prova de conceito** focado em desenvolvimento local usan
 ```bash
 # Inicialização completa em um comando
 bash quickstart.sh
-```
-
-Este script irá:
 1. ✅ Verificar/iniciar o LocalStack
 2. ✅ Criar a função Lambda
 3. ✅ Configurar os três usuários (admin, dev, analista)
@@ -193,7 +190,6 @@ curl -X GET "http://localhost:4566/2021-10-31/functions/feature-flag-manager/inv
       "description": "Número de tentativas da API",
       "lastModifiedAt": "2026-01-18T02:40:07Z",
       "lastModifiedBy": "",
-      "path": "/feature-flags/flags/api/API_RETRIES",
       "arn": "arn:aws:ssm:us-east-1:000000000000:parameter/feature-flags/flags/api/API_RETRIES"
     },
     {
@@ -203,7 +199,6 @@ curl -X GET "http://localhost:4566/2021-10-31/functions/feature-flag-manager/inv
       "description": "Timeout da API em ms",
       "lastModifiedAt": "2026-01-18T02:39:59Z",
       "lastModifiedBy": "",
-      "path": "/feature-flags/flags/api/API_TIMEOUT",
       "arn": "arn:aws:ssm:us-east-1:000000000000:parameter/feature-flags/flags/api/API_TIMEOUT"
     }
   ]
@@ -234,7 +229,6 @@ curl -X GET "http://localhost:4566/2021-10-31/functions/feature-flag-manager/inv
       "description": "Número de tentativas da API",
       "lastModifiedAt": "2026-01-18T02:40:07Z",
       "lastModifiedBy": "",
-      "path": "/feature-flags/flags/api/API_RETRIES",
       "arn": "arn:aws:ssm:us-east-1:000000000000:parameter/feature-flags/flags/api/API_RETRIES",
       "prefix": "api"
     }
@@ -263,7 +257,7 @@ curl -X GET "http://localhost:4566/2021-10-31/functions/feature-flag-manager/inv
 
 ### 2. Criar Parâmetro
 **Endpoint**: `POST /parameters`
-**Permissão**: `escrita`
+**Permissão**: `admin`
 
 Cria um novo feature flag com estrutura completa de metadados.
 
@@ -306,22 +300,20 @@ curl -X POST "http://localhost:4566/2021-10-31/functions/feature-flag-manager/in
 **Endpoint**: `PUT /parameters/{parameterId}`
 **Permissão**: `escrita`
 
-Atualiza um feature flag existente. Todos os campos são opcionais.
+Atualiza um feature flag existente. Apenas `value` e `description` podem ser atualizados.
 
 **Exemplo**:
 ```bash
-curl -X PUT "http://localhost:4566/2021-10-31/functions/feature-flag-manager/invocations/parameters/MY_FEATURE" \
+curl -X PUT "http://localhost:4566/2021-10-31/functions/feature-flag-manager/invocations/parameters/contingencia/CONTINGENCIA_TOTAL_ONLINE" \
   -H "X-User-Id: dev@local.dev" \
   -H "Content-Type: application/json" \
   -d '{
     "value": "false",
-    "description": "Descrição atualizada",
-    "lastModifiedBy": "dev@local.dev",
-    "prefix": "ui"
+    "description": "Descrição atualizada"
   }'
 ```
 
-**Nota**: Se o parâmetro foi criado com um prefixo, você deve fornecer o mesmo prefixo ao atualizar.
+**Nota**: Se o parâmetro possui prefixo, use o formato `{prefix}/{id}` no path.
 
 **Response** (200 OK):
 ```json
@@ -337,8 +329,8 @@ curl -X PUT "http://localhost:4566/2021-10-31/functions/feature-flag-manager/inv
 
 **Exemplo**:
 ```bash
-curl -X DELETE "http://localhost:4566/2021-10-31/functions/feature-flag-manager/invocations/parameters/MY_FEATURE" \
-  -H "X-User-Id: dev@local.dev"
+curl -X DELETE "http://localhost:4566/2021-10-31/functions/feature-flag-manager/invocations/parameters/contingencia/CONTINGENCIA_TOTAL_ONLINE" \
+  -H "X-User-Id: admin@local.dev"
 ```
 
 ### 5. Gerenciamento de Usuários
@@ -377,6 +369,24 @@ curl -X POST "http://localhost:4566/2021-10-31/functions/feature-flag-manager/in
 #### Atualizar Usuário
 **Endpoint**: `PUT /users/{userId}`
 **Permissão**: `admin`
+
+Atualiza um usuário existente. O campo `id` não pode ser alterado.
+
+**Exemplo**:
+```bash
+curl -X PUT "http://localhost:4566/2021-10-31/functions/feature-flag-manager/invocations/users/dev%40local.dev" \
+  -H "X-User-Id: admin@local.dev" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nome": "Novo Nome",
+    "permissoes": {
+      "leitura": true,
+      "escrita": true,
+      "admin": false
+    },
+    "ativo": true
+  }'
+```
 
 #### Deletar Usuário
 **Endpoint**: `DELETE /users/{userId}`

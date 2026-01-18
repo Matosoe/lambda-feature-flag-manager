@@ -22,14 +22,34 @@ else
 fi
 
 echo ""
-echo "Iniciando proxy do Swagger UI..."
+echo "Iniciando proxy do Swagger UI em segundo plano..."
 echo ""
+
+LOG_DIR="./logs"
+LOG_FILE="$LOG_DIR/swagger-ui.log"
+PID_FILE="$LOG_DIR/swagger-ui.pid"
+mkdir -p "$LOG_DIR"
+
+# Encerrar proxy anterior, se existir
+if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
+    echo "⚠️  Encerrando Swagger UI anterior (PID: $(cat "$PID_FILE"))"
+    kill "$(cat "$PID_FILE")" 2>/dev/null || true
+    rm -f "$PID_FILE"
+fi
 
 # Iniciar o proxy em background
 if command -v python3 &> /dev/null; then
-    python3 swagger-proxy.py
+    PYTHONIOENCODING=UTF-8 nohup python3 swagger-proxy.py > "$LOG_FILE" 2>&1 &
+    SWAGGER_PID=$!
+    echo "$SWAGGER_PID" > "$PID_FILE"
+    echo "✅ Swagger UI em segundo plano (PID: $SWAGGER_PID)"
+    echo "🧾 Logs: $LOG_FILE"
 elif command -v python &> /dev/null; then
-    python swagger-proxy.py
+    PYTHONIOENCODING=UTF-8 nohup python swagger-proxy.py > "$LOG_FILE" 2>&1 &
+    SWAGGER_PID=$!
+    echo "$SWAGGER_PID" > "$PID_FILE"
+    echo "✅ Swagger UI em segundo plano (PID: $SWAGGER_PID)"
+    echo "🧾 Logs: $LOG_FILE"
 else
     echo "❌ Python não encontrado!"
     echo "   Instale Python 3 para usar o proxy"

@@ -211,17 +211,34 @@ def get_openapi_spec() -> dict:
                     "security": [{"UserAuth": []}],
                     "parameters": [
                         {"$ref": "#/components/parameters/UserIdHeader"},
-                        {"name": "parameterId", "in": "path", "required": True, "schema": {"type": "string"}}
+                        {"name": "parameterId", "in": "path", "required": True, "schema": {"type": "string"}, "example": "contingencia/CONTINGENCIA_TOTAL_ONLINE"}
                     ],
+                    "requestBody": {
+                        "required": True,
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/UpdateParameterRequest"}
+                            }
+                        }
+                    },
                     "responses": {"200": {"description": "Parâmetro atualizado"}}
                 },
+                
+            },
+            "/parameters/arn/{parameterArn}": {
                 "delete": {
                     "tags": ["Parameters"],
-                    "summary": "Deletar feature flag",
+                    "summary": "Deletar feature flag por ARN (admin)",
                     "security": [{"UserAuth": []}],
                     "parameters": [
                         {"$ref": "#/components/parameters/UserIdHeader"},
-                        {"name": "parameterId", "in": "path", "required": True, "schema": {"type": "string"}}
+                        {
+                            "name": "parameterArn",
+                            "in": "path",
+                            "required": True,
+                            "schema": {"type": "string"},
+                            "example": "arn:aws:ssm:us-east-1:000000000000:parameter/feature-flags/flags/contingencia/CONTINGENCIA_TOTAL_ONLINE"
+                        }
                     ],
                     "responses": {"200": {"description": "Parâmetro deletado"}}
                 }
@@ -260,8 +277,16 @@ def get_openapi_spec() -> dict:
                     "security": [{"UserAuth": []}],
                     "parameters": [
                         {"$ref": "#/components/parameters/UserIdHeader"},
-                        {"name": "userId", "in": "path", "required": True, "schema": {"type": "string"}}
+                        {"name": "userId", "in": "path", "required": True, "schema": {"type": "string"}, "example": "dev@local.dev"}
                     ],
+                    "requestBody": {
+                        "required": True,
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/UpdateUserRequest"}
+                            }
+                        }
+                    },
                     "responses": {"200": {"description": "Usuário atualizado"}}
                 },
                 "delete": {
@@ -305,7 +330,6 @@ def get_openapi_spec() -> dict:
                         "description": {"type": "string", "example": "Habilita modo escuro"},
                         "lastModifiedAt": {"type": "string", "format": "date-time"},
                         "lastModifiedBy": {"type": "string", "format": "email"},
-                        "path": {"type": "string", "example": "/feature-flags/flags/ui/DARK_MODE", "description": "Caminho completo no Parameter Store"},
                         "arn": {"type": "string", "example": "arn:aws:ssm:us-east-1:000000000000:parameter/feature-flags/flags/ui/DARK_MODE", "description": "ARN do parâmetro"},
                         "previousVersion": {
                             "type": "object",
@@ -327,6 +351,28 @@ def get_openapi_spec() -> dict:
                         "description": {"type": "string"},
                         "lastModifiedBy": {"type": "string", "format": "email"},
                         "prefix": {"type": "string", "example": "ui", "description": "Prefixo customizado (opcional)"}
+                    }
+                },
+                "UpdateParameterRequest": {
+                    "type": "object",
+                    "properties": {
+                        "value": {"type": "string", "example": "true"},
+                        "description": {"type": "string", "example": "Nova descrição"}
+                    }
+                },
+                "UpdateUserRequest": {
+                    "type": "object",
+                    "properties": {
+                        "nome": {"type": "string", "example": "Nome do Usuário"},
+                        "permissoes": {
+                            "type": "object",
+                            "properties": {
+                                "leitura": {"type": "boolean"},
+                                "escrita": {"type": "boolean"},
+                                "admin": {"type": "boolean"}
+                            }
+                        },
+                        "ativo": {"type": "boolean", "example": True}
                     }
                 }
             },

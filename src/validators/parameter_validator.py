@@ -81,9 +81,16 @@ class ParameterValidator:
         if not data:
             raise ValidationError("Request body is required")
         
-        if not any(key in data for key in ['value', 'description', 'type', 'lastModifiedBy']):
+        allowed_fields = {'value', 'description'}
+        extra_fields = set(data.keys()) - allowed_fields
+        if extra_fields:
             raise ValidationError(
-                "At least one of 'value', 'description', 'type', or 'lastModifiedBy' must be provided"
+                f"Only 'value' and 'description' can be updated. Invalid fields: {', '.join(sorted(extra_fields))}"
+            )
+
+        if not any(key in data for key in ['value', 'description']):
+            raise ValidationError(
+                "At least one of 'value' or 'description' must be provided"
             )
         
         if 'value' in data:
@@ -96,14 +103,3 @@ class ParameterValidator:
             if not isinstance(description, str):
                 raise ValidationError("Field 'description' must be a string")
         
-        if 'type' in data:
-            param_type = data['type']
-            if param_type not in self.VALID_PARAM_TYPES:
-                raise ValidationError(
-                    f"Field 'type' must be one of: {', '.join(self.VALID_PARAM_TYPES)}"
-                )
-        
-        if 'lastModifiedBy' in data:
-            last_modified_by = data['lastModifiedBy']
-            if not isinstance(last_modified_by, str):
-                raise ValidationError("Field 'lastModifiedBy' must be a string")

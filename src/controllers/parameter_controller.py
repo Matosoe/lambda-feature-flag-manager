@@ -102,7 +102,14 @@ class ParameterController:
             API Gateway response
         """
         try:
-            body = json.loads(event.get('body', '{}'))
+            try:
+                body = json.loads(event.get('body', '{}'))
+            except json.JSONDecodeError as e:
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json'},
+                    'body': json.dumps({'error': f'Invalid JSON body: {str(e)}'})
+                }
             
             self.validator.validate_create(body)
             
@@ -145,7 +152,7 @@ class ParameterController:
             logger.error(f"Error creating parameter: {str(e)}")
             raise
     
-    def update_parameter(self, event: Dict[str, Any], parameter_id: str) -> Dict[str, Any]:
+    def update_parameter(self, event: Dict[str, Any], parameter_id: str, custom_prefix: str = '') -> Dict[str, Any]:
         """
         Update an existing feature flag parameter
         
@@ -157,21 +164,25 @@ class ParameterController:
             API Gateway response
         """
         try:
-            body = json.loads(event.get('body', '{}'))
+            try:
+                body = json.loads(event.get('body', '{}'))
+            except json.JSONDecodeError as e:
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json'},
+                    'body': json.dumps({'error': f'Invalid JSON body: {str(e)}'})
+                }
             
             self.validator.validate_update(body)
             
             value = body.get('value')
             description = body.get('description')
-            param_type = body.get('type')
-            last_modified_by = body.get('lastModifiedBy')
-            custom_prefix = body.get('prefix', '')  # Optional custom prefix
+            last_modified_by = event.get('headers', {}).get('X-User-Id', '')
             
             self.service.update_parameter(
                 param_id=parameter_id,
                 value=value,
                 description=description,
-                param_type=param_type,
                 last_modified_by=last_modified_by,
                 custom_prefix=custom_prefix
             )
@@ -194,4 +205,41 @@ class ParameterController:
             }
         except Exception as e:
             logger.error(f"Error updating parameter: {str(e)}")
+            raise
+
+    def delete_parameter(self, event: Dict[str, Any], parameter_arn: str) -> Dict[str, Any]:
+        """
+        Delete an existing feature flag parameter using ARN
+
+        Args:
+            event: API Gateway event
+            parameter_arn: ARN of parameter to delete
+
+        Returns:
+            API Gateway response
+        """
+        try:
+            required_prefix = ":parameter/feature-flags/flags"
+            if required_prefix not in parameter_arn:
+                raise ValidationError(
+                    "Parameter ARN must contain ':parameter/feature-flags/flags'"
+                )
+
+            self.service.delete_parameter_by_arn(parameter_arn)
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json'},
+                'body': json.dumps({
+                    'message': 'Parameter deleted successfully',
+                    'arn': parameter_arn
+                })
+            }
+        except ParameterNotFoundError as e:
+            return {
+                'statusCode': 404,
+                'headers': {'Content-Type': 'application/json'},
+                'body': json.dumps({'error': str(e)})
+            }
+        except Exception as e:
+            logger.error(f"Error deleting parameter: {str(e)}")
             raise
