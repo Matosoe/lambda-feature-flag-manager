@@ -19,7 +19,7 @@ def get_openapi_spec() -> dict:
             "version": "2.0.0"
         },
         "servers": [
-            {"url": "http://localhost:4566/2021-10-31/functions/feature-flag-manager/invocations", "description": "LocalStack (Desenvolvimento Local)"}
+            {"url": "http://localhost:8080", "description": "Swagger Proxy (Desenvolvimento Local)"}
         ],
         "tags": [
             {"name": "Parameters", "description": "Operações com feature flags"},

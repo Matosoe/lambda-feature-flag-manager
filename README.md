@@ -6,6 +6,21 @@ Sistema de gerenciamento de feature flags com suporte a usuários e permissões,
 
 Este é um projeto de **prova de conceito** focado em desenvolvimento local usando Docker e LocalStack.
 
+### Inicialização Automática (Recomendado)
+
+```bash
+# Inicialização completa em um comando
+bash quickstart.sh
+```
+
+Este script irá:
+1. ✅ Verificar/iniciar o LocalStack
+2. ✅ Criar a função Lambda
+3. ✅ Configurar os três usuários (admin, dev, analista)
+4. ✅ Iniciar o Swagger UI em http://localhost:8080
+
+### Inicialização Manual (Passo a Passo)
+
 ```bash
 # 1. Buildar as imagens
 ./build.sh
@@ -13,11 +28,50 @@ Este é um projeto de **prova de conceito** focado em desenvolvimento local usan
 # 2. Subir o ambiente (LocalStack + Lambda + Parameter Store)
 ./up.sh
 
-# 3. Testar a API
-./test-api.sh
+# 3. Inicializar a Lambda e usuários
+bash run-init.sh
+
+# 4. Iniciar o Swagger UI (em outro terminal ou use & no final)
+bash start-swagger.sh
+
+# 5. Acessar o Swagger UI
+# Abra no navegador: http://localhost:8080
 ```
 
+**⚠️ IMPORTANTE**: O Swagger UI está disponível em `http://localhost:8080` (não na porta 4566)
+
 📖 **Documentação completa de desenvolvimento local**: [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md)
+
+## 📖 Swagger UI - Interface Web da API
+
+Este projeto inclui uma interface web interativa (Swagger UI) para testar e documentar a API.
+
+### Como Acessar
+
+Após inicializar o ambiente:
+
+```bash
+# Opção 1: Script automático (recomendado)
+bash start-swagger.sh
+
+# Opção 2: Manual
+python swagger-proxy.py
+```
+
+Então acesse no navegador: **http://localhost:8080**
+
+**⚠️ Observação**: 
+- O LocalStack roda na porta **4566** (apenas invocações Lambda diretas)
+- O Swagger UI roda na porta **8080** (interface web amigável)
+- Use sempre a porta **8080** para acessar via navegador
+
+### Funcionalidades do Swagger UI
+
+- ✅ Interface visual para testar todos os endpoints
+- ✅ Documentação automática da API
+- ✅ Header `X-User-Id` adicionado automaticamente
+- ✅ Exemplos de requisições e respostas
+- ✅ Validação de schemas em tempo real
 
 ### Pré-requisitos
 
@@ -270,6 +324,7 @@ curl -X POST "http://localhost:4566/2021-10-31/functions/feature-flag-manager/in
 ## 📚 Documentação Completa
 
 - **[LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md)** - Guia completo do ambiente local
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Resolução de problemas comuns
 - **[PARAMETER_STRUCTURE.md](docs/PARAMETER_STRUCTURE.md)** - Estrutura JSON dos parâmetros
 - **[USERS_AND_PERMISSIONS.md](docs/USERS_AND_PERMISSIONS.md)** - Sistema de usuários e permissões
 - **[EXAMPLES.md](docs/EXAMPLES.md)** - Exemplos práticos de uso
@@ -295,12 +350,30 @@ make logs-lambda
 # Reiniciar ambiente
 make restart
 
-# Limpar tudo (dados, containers, volumes)
-make clean
+# Parar ambiente (preserva dados)
+./down.sh
+
+# Limpeza completa (remove volumes e dados)
+bash clean-all.sh
 
 # Informações do ambiente
 make info
+
+# Inicialização rápida completa
+bash quickstart.sh
 ```
+
+### Scripts Disponíveis
+
+| Script | Descrição |
+|--------|-----------|
+| `quickstart.sh` | Inicialização automática completa (recomendado) |
+| `build.sh` | Constrói as imagens Docker |
+| `up.sh` | Sobe o ambiente LocalStack |
+| `down.sh` | Para o ambiente e limpa containers órfãos |
+| `run-init.sh` | Inicializa Lambda e usuários |
+| `start-swagger.sh` | Inicia apenas o Swagger UI |
+| `clean-all.sh` | Limpeza completa (remove dados) |
 
 ## ⚡ Boas Práticas Implementadas
 
