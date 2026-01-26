@@ -11,10 +11,9 @@ services:
     volumes:
       - ./localstack-data:/var/lib/localstack
   oidc:
-    image: oryd/fake-oauth2-server:latest
+    image: ghcr.io/navikt/mock-oauth2-server:latest
     ports:
       - "4444:4444"
     environment:
-      - ISSUER=http://localhost:4444
-      - OIDC_SUBJECT=demo-user
-      - OIDC_CLAIMS={"email":"user@demo.com"}
+      - SERVER_PORT=4444
+    command: ["--issuer-id", "default", "--port", "4444"]
