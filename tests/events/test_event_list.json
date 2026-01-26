@@ -1,9 +1,0 @@
-{
-  "httpMethod": "GET",
-  "path": "/parameters",
-  "headers": {
-    "Content-Type": "application/json"
-  },
-  "body": null,
-  "isBase64Encoded": false
-}

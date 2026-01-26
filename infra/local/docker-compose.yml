@@ -1,0 +1,20 @@
+version: '3.8'
+services:
+  localstack:
+    image: localstack/localstack:latest
+    ports:
+      - "4566:4566"
+      - "4571:4571"
+    environment:
+      - SERVICES=s3,lambda,iam,sts
+      - DEBUG=1
+    volumes:
+      - ./localstack-data:/var/lib/localstack
+  oidc:
+    image: oryd/fake-oauth2-server:latest
+    ports:
+      - "4444:4444"
+    environment:
+      - ISSUER=http://localhost:4444
+      - OIDC_SUBJECT=demo-user
+      - OIDC_CLAIMS={"email":"user@demo.com"}

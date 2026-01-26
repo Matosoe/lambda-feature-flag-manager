@@ -1,9 +1,0 @@
-{
-  "httpMethod": "PUT",
-  "path": "/parameters/test-feature",
-  "headers": {
-    "Content-Type": "application/json"
-  },
-  "body": "{\"value\": false, \"description\": \"Updated test feature flag\", \"enabled\": false, \"modified_by\": \"admin@example.com\"}",
-  "isBase64Encoded": false
-}

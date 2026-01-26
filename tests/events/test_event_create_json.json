@@ -1,9 +1,0 @@
-{
-  "httpMethod": "POST",
-  "path": "/parameters",
-  "headers": {
-    "Content-Type": "application/json"
-  },
-  "body": "{\"name\": \"payment-config\", \"value\": {\"providers\": [\"stripe\", \"paypal\"], \"currency\": \"BRL\", \"max_amount\": 10000}, \"description\": \"Configuração do sistema de pagamentos\", \"domain\": \"payments\", \"enabled\": true, \"value_type\": \"json\", \"modified_by\": \"finance@exemplo.com\", \"type\": \"String\"}",
-  "isBase64Encoded": false
-}

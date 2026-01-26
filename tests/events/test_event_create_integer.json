@@ -1,9 +1,0 @@
-{
-  "httpMethod": "POST",
-  "path": "/parameters",
-  "headers": {
-    "Content-Type": "application/json"
-  },
-  "body": "{\"name\": \"max-connections\", \"value\": 100, \"description\": \"Número máximo de conexões simultâneas\", \"domain\": \"infrastructure\", \"enabled\": true, \"value_type\": \"integer\", \"modified_by\": \"devops@exemplo.com\", \"type\": \"String\"}",
-  "isBase64Encoded": false
-}

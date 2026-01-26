@@ -1,9 +1,0 @@
-{
-  "httpMethod": "POST",
-  "path": "/parameters",
-  "headers": {
-    "Content-Type": "application/json"
-  },
-  "body": "{\"name\": \"test-feature\", \"value\": true, \"description\": \"Test feature flag\", \"domain\": \"user-interface\", \"enabled\": true, \"value_type\": \"boolean\", \"modified_by\": \"admin@example.com\", \"type\": \"String\"}",
-  "isBase64Encoded": false
-}

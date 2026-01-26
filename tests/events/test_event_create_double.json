@@ -1,9 +1,0 @@
-{
-  "httpMethod": "POST",
-  "path": "/parameters",
-  "headers": {
-    "Content-Type": "application/json"
-  },
-  "body": "{\"name\": \"api-timeout\", \"value\": 30.5, \"description\": \"Timeout da API em segundos\", \"domain\": \"backend\", \"enabled\": true, \"value_type\": \"double\", \"modified_by\": \"backend-team@exemplo.com\", \"type\": \"String\"}",
-  "isBase64Encoded": false
-}
